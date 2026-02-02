@@ -1,0 +1,31 @@
+# Nurture - Requirements
+# =====================
+# Core dependencies for the parent agent simulation
+
+# No external dependencies required for core functionality!
+# The following are optional for enhanced features:
+
+# LLM Integration (optional)
+# --------------------------
+# Uncomment if using OpenAI API:
+# openai>=1.0.0
+
+# Uncomment if using local LLM with HTTP API:
+# requests>=2.28.0
+
+# Development & Testing (optional)
+# ---------------------------------
+# pytest>=7.0.0
+# pytest-asyncio>=0.21.0
+# black>=23.0.0
+# mypy>=1.0.0
+
+# Future Features (optional)
+# --------------------------
+# For web interface:
+# flask>=3.0.0
+# flask-socketio>=5.3.0
+
+# For voice features:
+# pyttsx3>=2.90
+# SpeechRecognition>=3.10.0
