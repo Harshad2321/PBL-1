@@ -43,7 +43,7 @@ nurture/
 │   └── behavioral_constraints.py
 │
 ├── utils/                     # Utilities
-│   ├── llm_interface.py      # 4 LLM providers (Groq, OpenAI, Ollama, Mock)
+│   ├── llm_interface.py      # Multiple LLM providers (OpenAI, Ollama, Mock)
 │   ├── logger.py             # Logging
 │   └── helpers.py            # Common utilities
 │
@@ -131,7 +131,7 @@ COMPLETE & TESTED:
   ✓ AIParent agent with personalities
   ✓ Rule engine with priorities
   ✓ InteractionManager
-  ✓ 4 LLM providers (Groq free, OpenAI, Ollama, Mock)
+  ✓ Multiple LLM providers (OpenAI, Ollama, Mock)
   ✓ LearningSystem with sentiment/topic analysis
   ✓ StoryEngine with full ACT 1
   ✓ 12 scenarios with 3 choices each (36 total branches)
@@ -272,13 +272,12 @@ Code Organization:
 LLM INTEGRATION
 ═════════════════════════════════════════════════════════════════════════════
 
-4 Provider Support:
+Multiple Provider Support:
 
-1. GROQ (Default - Free & Ultra-Fast)
-   - Free tier: 30 req/min, 14,400 req/day
-   - LPU-based inference (2x faster than GPU)
-   - Fallback to mock on API errors
-   - Get key: https://console.groq.com
+1. MOCK (Default for testing)
+   - Template-based responses
+   - No API calls needed
+   - Perfect for development
 
 2. OPENAI (If user has subscription)
    - Any model (GPT-4, 3.5-turbo, etc.)
@@ -288,11 +287,6 @@ LLM INTEGRATION
    - Runs on user's machine
    - No API key needed
    - Requires local model download
-
-4. MOCK (Default for testing)
-   - Template-based responses
-   - No API calls
-   - Perfect for development
 
 
 ═════════════════════════════════════════════════════════════════════════════
