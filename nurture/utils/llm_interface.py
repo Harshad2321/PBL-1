@@ -601,16 +601,15 @@ class LocalLLM(LLMInterface):
                         system_parts.append(f"YOU ARE UPSET BECAUSE: {grievance}")
             system_parts.append("")
         
-        # Instructions that emphasize referencing what happened
+        # Instructions that emphasize natural responses based on what happened
         system_parts.extend([
             "IMPORTANT - HOW TO RESPOND:",
-            "- You are NOT a therapist. You are a tired, real person with feelings.",
-            "- If he did something wrong (see above), BRING IT UP. Don't let it slide.",
-            "- Ask him WHY he did what he did. Hold him accountable.",
-            "- If he makes small talk when he should be apologizing, call him out.",
-            "- Short, pointed responses: 'Why did you do that?' 'You sided with THEM.' 'I'm still upset about earlier.'",
-            "- You DON'T forget what just happened. You DON'T pretend everything is fine.",
-            "- You can be hurt, angry, cold, sarcastic, or confrontational.",
+            "- You are a tired new mother. Respond naturally based on your mood and what just happened.",
+            "- If he did something that upset you, your tone reflects it (cold, distant, short).",
+            "- If he did something good, you can be warmer and more open.",
+            "- Don't attack him unprovoked - but don't pretend everything is fine if it's not.",
+            "- Keep responses SHORT (1-2 sentences). Be a real person, not a therapist.",
+            "- You can bring up what happened naturally: 'I'm still tired from last night.' or 'Thanks for getting up earlier.'",
             "",
         ])
         
@@ -618,9 +617,9 @@ class LocalLLM(LLMInterface):
         if is_first_message and grievance:
             system_parts.extend([
                 "*** THIS IS THE START OF THE CONVERSATION ***",
-                "He's trying to talk to you after what he just did. REFERENCE IT.",
-                f"You're thinking about: {grievance}",
-                "Don't just say 'hi' back. You have something on your mind.",
+                f"You're still thinking about: {grievance}",
+                "Your tone is affected by this. You might be cold, tired, or distant.",
+                "If he says something casual, you can respond but your mood shows.",
                 "",
             ])
         
@@ -643,8 +642,8 @@ class LocalLLM(LLMInterface):
         
         # Final instruction
         system_parts.extend([
-            "Respond as Sarah (1-2 sentences max). Be real, not nice. No therapy talk.",
-            "If he wronged you, SAY SO. Examples: 'Why did you side with them?' 'You didn't defend me.' 'I'm still hurt about that.'",
+            "Respond as Sarah (1-2 sentences max). Be natural and real.",
+            "Your mood affects your tone. Examples: 'Hey.' (cold) vs 'Hey, how are you feeling?' (warm)",
         ])
         
         return "\n".join(system_parts)
@@ -1163,18 +1162,55 @@ class LLMFactory:
             return GroqLLM(config)
     
     @staticmethod
-    def create_generator(config: LLMConfig) -> Callable[[str, Optional[Dict[str, Any]]], str]:
+    def create_generator(config: LLMConfig) -> 'LLMWrapper':
         """
-        Create a simple generator function for use with AIParent.
+        Create a wrapper that holds the LLM instance for use with AIParent.
         
         Args:
             config: LLM configuration
             
         Returns:
-            Function that takes prompt and optional context, returns response
+            LLMWrapper that can be called as a function and reset
         """
         llm = LLMFactory.create(config)
-        return lambda prompt, context=None: llm.generate(prompt, context)
+        return LLMWrapper(llm)
+
+
+class LLMWrapper:
+    """
+    Wrapper class that holds LLM instance and provides reset capability.
+    Can be called as a function for backwards compatibility.
+    """
+    
+    def __init__(self, llm: LLMInterface):
+        self._llm = llm
+    
+    def __call__(self, prompt: str, context: Optional[Dict[str, Any]] = None) -> str:
+        """Generate response - can be called as a function."""
+        return self._llm.generate(prompt, context)
+    
+    def generate(self, prompt: str, context: Optional[Dict[str, Any]] = None) -> str:
+        """Generate response."""
+        return self._llm.generate(prompt, context)
+    
+    def reset(self) -> None:
+        """Reset conversation history and context for a fresh start."""
+        if hasattr(self._llm, 'conversation_history'):
+            self._llm.conversation_history = []
+        if hasattr(self._llm, 'current_scenario'):
+            self._llm.current_scenario = None
+        if hasattr(self._llm, 'current_choice'):
+            self._llm.current_choice = None
+        if hasattr(self._llm, 'player_patterns'):
+            self._llm.player_patterns = {}
+        if hasattr(self._llm, 'scenario_context'):
+            self._llm.scenario_context = None
+        if hasattr(self._llm, 'last_player_choice'):
+            self._llm.last_player_choice = None
+    
+    def is_available(self) -> bool:
+        """Check if LLM is available."""
+        return self._llm.is_available()
 
 
 # Convenience function for quick setup

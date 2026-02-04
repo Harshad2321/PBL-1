@@ -722,7 +722,11 @@ class AIParent(BaseParent):
         Reset conversation history for a new conversation.
         Call this before starting a new conversation after a scenario choice.
         """
-        if self._llm_generator and hasattr(self._llm_generator, 'conversation_history'):
+        # Reset LLM wrapper if it has reset method
+        if self._llm_generator and hasattr(self._llm_generator, 'reset'):
+            self._llm_generator.reset()
+        # Fallback for old-style generators with conversation_history
+        elif self._llm_generator and hasattr(self._llm_generator, 'conversation_history'):
             self._llm_generator.conversation_history = []
     
     def get_relationship_summary(self) -> Dict[str, float]:

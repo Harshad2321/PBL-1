@@ -13,9 +13,9 @@ from pathlib import Path
 
 # Core imports
 from nurture.core.enums import ParentRole
-from nurture.core.data_structures import PersonalityProfile
+from nurture.core.data_structures import ParentState, PersonalityProfile
 from nurture.core.events import get_event_bus
-from nurture.core.interaction_manager import InteractionManager, ScenarioContext
+from nurture.core.interaction_manager import InteractionManager
 
 # Agent imports
 from nurture.agents.player_parent import PlayerParent
@@ -36,7 +36,7 @@ from nurture.rules.emotional_rules import EmotionalRules
 from nurture.rules.behavioral_constraints import BehavioralConstraints
 
 # Utils imports
-from nurture.utils.llm_interface import create_llm_generator, LLMConfig
+from nurture.utils.llm_interface import create_llm_generator
 
 
 def load_env_file():
@@ -70,6 +70,8 @@ class NurtureGame:
     Manages game setup, role selection, and the main interaction loop.
     Features adaptive AI that learns from user inputs.
     """
+    
+    AUTO_SAVE_NAME = "autosave"
     
     def __init__(self, save_directory: str = "./saves"):
         """
@@ -125,9 +127,6 @@ class NurtureGame:
     
     def _initialize_agents(self, player_role: ParentRole, ai_role: ParentRole) -> None:
         """Initialize player and AI parent agents."""
-        
-        # Create player parent state using factory method
-        from nurture.core.data_structures import ParentState, PersonalityProfile
         from nurture.memory.memory_store import MemoryStore
         
         player_state = ParentState.create_player(
@@ -152,60 +151,28 @@ class NurtureGame:
             memory_store=MemoryStore("ai_partner")
         )
         
-        # Set up LLM with Ollama (local) -> Mock fallback
-        import os
-        
+        # Set up LLM with Ollama (mannix/llama3-12b)
         llm_generator = None
         
-        # Try Ollama (local LLM)
-        print("[*] Checking Ollama (local AI)...")
+        print("[*] Connecting to Ollama (mannix/llama3-12b)...")
         try:
-            import urllib.request
-            req = urllib.request.Request('http://localhost:11434/api/tags')
-            response = urllib.request.urlopen(req, timeout=3)
-            
-            # Try to find a good model
-            import json
-            models_data = json.loads(response.read().decode())
-            available_models = [m['name'].split(':')[0] for m in models_data.get('models', [])]
-            
-            # Prefer conversational models
-            preferred_models = ['neural-chat', 'mistral', 'llama2', 'dolphin-mixtral']
-            selected_model = None
-            
-            for pref in preferred_models:
-                for model in available_models:
-                    if pref in model.lower():
-                        selected_model = pref
-                        break
-                if selected_model:
-                    break
-            
-            # Use first available model if no preference found
-            if not selected_model and available_models:
-                selected_model = available_models[0]
-            
-            if selected_model:
-                print(f"[OK] Ollama detected! Using '{selected_model}' model for context-aware AI.")
-                print("    Responses will understand scenario and conversation context.")
-                llm_generator = create_llm_generator(
-                    provider="ollama",
-                    model_name=selected_model
-                )
-            else:
-                print("[!] Ollama found but no models pulled.")
-                print("    Pull a model with: ollama pull neural-chat")
+            llm_generator = create_llm_generator(
+                provider="ollama",
+                model_name="mannix/llama3-12b:latest",
+                timeout=60
+            )
+            print("[OK] Ollama connected with mannix/llama3-12b model!")
+            print("    Responses will be natural and context-aware.")
         except Exception as e:
             print(f"[!] Ollama not available: {e}")
-            print("    Install Ollama from https://ollama.ai and run: ollama pull neural-chat")
-        
-        # Fall back to Mock if Ollama not available
-        if llm_generator is None:
+            print("    Make sure Ollama is running: ollama serve")
             print("[*] Using Mock LLM (template responses)")
-            print("    For real AI responses, install Ollama: https://ollama.ai")
             llm_generator = create_llm_generator(provider="mock")
         
         self.ai_parent.set_llm_generator(llm_generator)
+        
+        # Reset conversation history for fresh start
+        self.ai_parent.reset_conversation()
         
         # Initialize rule engine
         rule_engine = RuleEngine()
@@ -250,65 +217,6 @@ class NurtureGame:
         """Initialize the story engine with Act 1."""
         self.story_engine = StoryEngine()
         print("[OK] Story Engine initialized - Your parenting journey begins...")
-    
-    def configure_llm(
-        self,
-        provider: str = "mock",
-        api_key: Optional[str] = None,
-        model_name: str = "gpt-3.5-turbo",
-        **kwargs
-    ) -> None:
-        """
-        Configure the LLM for AI responses.
-        
-        Args:
-            provider: LLM provider (openai, local, mock)
-            api_key: API key if needed
-            model_name: Model to use
-            **kwargs: Additional configuration
-        """
-        if not self.ai_parent:
-            print("Error: Start game first before configuring LLM")
-            return
-        
-        llm_generator = create_llm_generator(
-            provider=provider,
-            api_key=api_key,
-            model_name=model_name,
-            **kwargs
-        )
-        self.ai_parent.set_llm_generator(llm_generator)
-        print(f"[OK] LLM configured: {provider} / {model_name}")
-    
-    def set_scenario(
-        self,
-        title: str,
-        description: str,
-        topic: str = "",
-        **kwargs
-    ) -> None:
-        """
-        Set the current interaction scenario.
-        
-        Args:
-            title: Scenario title
-            description: Scenario description
-            topic: Main topic of discussion
-        """
-        if not self.interaction_manager:
-            print("Error: Start game first")
-            return
-        
-        scenario = ScenarioContext(
-            scenario_id=f"scenario_{hash(title) % 10000:04d}",
-            scenario_name=title,
-            description=description,
-            **kwargs
-        )
-        
-        self.interaction_manager.start_scenario(scenario)
-        print(f"\n=== Scenario: {title} ===")
-        print(f"{description}\n")
     
     def send_message(self, message: str) -> str:
         """
@@ -524,13 +432,28 @@ class NurtureGame:
         Save the current game state.
         
         Args:
-            filename: Optional custom filename
+            filename: Optional custom filename (defaults to autosave)
             
         Returns:
             Path to save file
         """
         if not self.state_manager:
             return "Error: Game not started"
+        
+        # Use autosave as default
+        if filename is None:
+            filename = self.AUTO_SAVE_NAME
+        
+        # Update session with story progress before saving
+        if self.story_engine and self.state_manager.session:
+            status = self.story_engine.get_status()
+            self.state_manager.session.current_day = status.get("current_day", 1)
+            self.state_manager.session.current_act = status.get("current_act", 1)
+            # Save player role
+            if self._player_role:
+                self.state_manager.session.flags["player_role"] = self._player_role.value
+            # Save story state
+            self.state_manager.session.flags["story_state"] = self.story_engine.get_save_state()
         
         return self.state_manager.save_game(filename)
     
@@ -563,6 +486,86 @@ class NurtureGame:
         
         return False
     
+    def _check_for_save(self) -> bool:
+        """
+        Check if an autosave exists and ask user if they want to continue.
+        
+        Returns:
+            True if user wants to continue from save, False for new game
+        """
+        save_path = Path(self.save_directory) / f"{self.AUTO_SAVE_NAME}.json"
+        
+        if not save_path.exists():
+            return False
+        
+        # Read save info
+        try:
+            import json
+            with open(save_path, 'r') as f:
+                data = json.load(f)
+            
+            last_saved = data.get("last_saved", "Unknown")
+            current_day = data.get("current_day", 1)
+            current_act = data.get("current_act", 1)
+            
+            print(f"\n{'='*70}")
+            print("  SAVED GAME FOUND!")
+            print(f"{'='*70}")
+            print(f"\n  Last played: {last_saved[:19] if last_saved != 'Unknown' else 'Unknown'}")
+            print(f"  Progress: Act {current_act}, Day {current_day}")
+            print(f"\n  1. Continue from saved game")
+            print(f"  2. Start a new game")
+            
+            while True:
+                choice = input("\nYour choice (1 or 2): ").strip()
+                if choice == "1":
+                    return True
+                elif choice == "2":
+                    confirm = input("Are you sure? This will overwrite your save. (y/n): ").strip().lower()
+                    if confirm == "y":
+                        return False
+                    # If not confirmed, ask again
+                else:
+                    print("Invalid choice. Please enter 1 or 2.")
+        except Exception as e:
+            print(f"[!] Could not read save file: {e}")
+            return False
+    
+    def _load_saved_game(self) -> bool:
+        """Load the autosave and restore game state."""
+        try:
+            # Initialize state manager first
+            self.state_manager = StateManager(save_directory=self.save_directory)
+            
+            # Load the session
+            session = self.state_manager.load_game(self.AUTO_SAVE_NAME)
+            
+            if session:
+                # Get player role from flags
+                role_value = session.flags.get("player_role", "father")
+                self._player_role = ParentRole(role_value)
+                ai_role = self._player_role.get_opposite()
+                
+                print(f"\n=== Continuing as {self._player_role.value.title()} ===")
+                print(f"AI Partner: {ai_role.value.title()}")
+                
+                # Initialize agents with saved role
+                self._initialize_agents(self._player_role, ai_role)
+                
+                # Restore story state
+                story_state = session.flags.get("story_state")
+                if story_state and self.story_engine:
+                    self.story_engine.load_save_state(story_state)
+                    status = self.story_engine.get_status()
+                    print(f"\n[OK] Restored progress: Act {status.get('current_act', 1)}, Day {status.get('day', 1)}")
+                
+                return True
+        except Exception as e:
+            print(f"[!] Error loading save: {e}")
+            print("[*] Starting new game instead...")
+        
+        return False
+    
     def run_interactive(self) -> None:
         """
         Run the game in interactive console mode with narrative progression.
@@ -572,25 +575,39 @@ class NurtureGame:
         print("  Watch your parenting journey unfold as your AI partner learns from you")
         print("="*70)
         
-        # Role selection
-        print("\nSelect your role:")
-        print("  1. Father")
-        print("  2. Mother")
-        
-        while True:
-            choice = input("\nEnter choice (1 or 2): ").strip()
-            if choice == "1":
-                self.select_role(ParentRole.FATHER)
-                break
-            elif choice == "2":
-                self.select_role(ParentRole.MOTHER)
-                break
+        # Check for existing save
+        if self._check_for_save():
+            if self._load_saved_game():
+                # Skip role selection, go straight to game
+                self._is_running = True
             else:
-                print("Invalid choice. Please enter 1 or 2.")
+                # Load failed, continue to role selection
+                pass
+        
+        # Only do role selection if not already loaded
+        if not self._is_running:
+            # Role selection
+            print("\nSelect your role:")
+            print("  1. Father")
+            print("  2. Mother")
+            
+            while True:
+                choice = input("\nEnter choice (1 or 2): ").strip()
+                if choice == "1":
+                    self.select_role(ParentRole.FATHER)
+                    break
+                elif choice == "2":
+                    self.select_role(ParentRole.MOTHER)
+                    break
+                else:
+                    print("Invalid choice. Please enter 1 or 2.")
+            
+            self._is_running = True
+        
+        # Show available commands
+        print("\nCommands: /status /save /quit /help")
         
         # Main game loop
-        self._is_running = True
-        
         while self._is_running:
             # Present the current scenario
             if not self._current_day_active:
@@ -614,8 +631,9 @@ class NurtureGame:
                     if self.respond_to_scenario(choice_num):
                         # Check if act completed - end the game for now
                         if self.story_engine and self.story_engine.can_progress_to_next_act():
+                            self.save_game()
                             print("\nThank you for playing Nurture!")
-                            print("Your parenting story has been saved.\n")
+                            print("Your progress has been saved.\n")
                             self._is_running = False
                             break
                         
@@ -655,14 +673,20 @@ class NurtureGame:
                     print("Invalid input. Enter 1-3 for choices or /command")
                 
             except KeyboardInterrupt:
-                print("\n\nGame interrupted.")
+                print("\n\nGame interrupted. Saving...")
+                self.save_game()
                 self._is_running = False
             except EOFError:
-                print("\n\nEnd of input.")
+                print("\n\nEnd of input. Saving...")
+                self.save_game()
                 self._is_running = False
         
+        # Auto-save when exiting game loop
+        if self.state_manager:
+            self.save_game()
+        
         print("\nThank you for playing Nurture!")
-        print("Your parenting story has been saved.\n")
+        print("Your progress has been saved. See you next time!\n")
     
     def _handle_command(self, command: str) -> None:
         """Handle console commands."""
@@ -697,17 +721,25 @@ class NurtureGame:
         
         elif cmd == "save":
             filepath = self.save_game()
-            print(f"[OK] Game saved to: {filepath}")
+            print(f"[OK] Game saved!")
         
         elif cmd == "quit" or cmd == "exit":
-            confirm = input("Save before quitting? (y/n): ").strip().lower()
-            if confirm == "y":
-                self.save_game()
+            # Auto-save before quitting
+            print("[*] Saving game...")
+            self.save_game()
+            print("[OK] Game saved!")
             self._is_running = False
+        
+        elif cmd == "help":
+            print("\nAvailable commands:")
+            print("  /status - View story and relationship progress")
+            print("  /save   - Save your game")
+            print("  /quit   - Save and exit game")
+            print("  /help   - Show this help")
         
         else:
             print(f"Unknown command: /{cmd}")
-            print("Available commands: /status, /save, /quit")
+            print("Type /help for available commands.")
 
 
 def main():

@@ -3,16 +3,19 @@ START PLAYING NURTURE
 
 From the terminal in VS Code:
 
-  python nurture/main.py
+  python -m nurture.main
 
 What happens:
-  1. Choose your role (Father or Mother)
-  2. Read today's scenario carefully
-  3. Choose response (1, 2, or 3)
-  4. AI learns from your choice
-  5. Optionally talk with your partner
-  6. Move to next day
-  7. Play through 12 days of Act 1
+  1. Continue from save OR start new game
+  2. Choose your role (Father or Mother)
+  3. Read today's scenario carefully
+  4. Choose response (1, 2, or 3)
+  5. AI learns from your choice
+  6. Optionally talk with your partner
+  7. Move to next day
+  8. Play through 12 days of Act 1
+
+Game auto-saves when you quit!
 
 ═════════════════════════════════════════════════════════════════════════
 
@@ -47,11 +50,13 @@ records patterns across all your choices.
 
 SAVE YOUR GAME:
 
-Type /save at any time. Your progress, learning data, and 
-relationship status are all saved.
+Type /save at any time. Game also auto-saves when you quit!
 
-Check progress: /status
-Quit: /quit
+Commands:
+  /status - Check progress
+  /save   - Manual save
+  /quit   - Save and exit
+  /help   - Show all commands
 
 ═════════════════════════════════════════════════════════════════════════
 
@@ -79,14 +84,6 @@ EXPECTED GAMEPLAY TIME:
 
 ═════════════════════════════════════════════════════════════════════════
 
-TESTING THE SYSTEM (Without Full Playthrough):
-
-  python test_narrative_gameplay.py
-
-This runs through 3 days automatically to show how everything works.
-
-═════════════════════════════════════════════════════════════════════════
-
 FUTURE ACTS (Coming Soon):
 
   ACT 1 - FOUNDATION (Age 0-3): 12 days - YOU ARE HERE
@@ -98,6 +95,6 @@ FUTURE ACTS (Coming Soon):
 
 Ready to start? Run:
 
-  python nurture/main.py
+  python -m nurture.main
 
 ═════════════════════════════════════════════════════════════════════════

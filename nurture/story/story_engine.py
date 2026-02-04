@@ -239,7 +239,9 @@ class StoryEngine:
         
         return {
             "act": self.progress.current_act,
+            "current_act": self.current_act_index + 1,
             "day": self.progress.current_day,
+            "current_day": self.progress.current_day,
             "total_days": current_act.total_days,
             "progress_percent": (self.progress.current_day / current_act.total_days) * 100,
             "acts_completed": self.progress.total_acts_completed,
@@ -247,3 +249,24 @@ class StoryEngine:
             "choices_made": len(self.progress.choices_made),
             "total_impacts": len(self.progress.impacts_accumulated),
         }
+    
+    def get_save_state(self) -> Dict[str, Any]:
+        """Get story state for saving (serializable dict)."""
+        return self.progress.to_dict()
+    
+    def load_save_state(self, state: Dict[str, Any]) -> bool:
+        """Load story state from saved dict."""
+        try:
+            self.progress = StoryProgress(
+                current_act=state.get("current_act", "ACT 1 — FOUNDATION (Age 0–3)"),
+                current_day=state.get("current_day", 1),
+                total_acts_completed=state.get("total_acts_completed", 0),
+                choices_made=state.get("choices_made", []),
+                impacts_accumulated=state.get("impacts_accumulated", []),
+            )
+            # Update act index based on current day
+            self.current_act_index = min(state.get("total_acts_completed", 0), len(self.acts) - 1)
+            return True
+        except Exception as e:
+            print(f"Error loading story state: {e}")
+            return False
