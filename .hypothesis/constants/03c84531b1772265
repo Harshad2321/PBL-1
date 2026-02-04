@@ -1,0 +1,4 @@
+# file: C:\Users\ParthK\Documents\GitHub\PBL-1\nurture\personality\pattern_tracker.py
+# hypothesis_version: 6.151.4
+
+[0.0, 0.1, 0.3, 0.7, 0.8, 1.0, 'PatternTracker', 'action_history', 'break_threshold', 'decay_rate', 'detected_patterns', 'min_occurrences', 'pattern_weights', 'positive_streak', 'time_window_days']

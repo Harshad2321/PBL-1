@@ -13,9 +13,13 @@
 # Uncomment if using local LLM with HTTP API:
 # requests>=2.28.0
 
+# Development & Testing
+# ---------------------------------
+pytest>=7.0.0
+hypothesis>=6.0.0
+
 # Development & Testing (optional)
 # ---------------------------------
-# pytest>=7.0.0
 # pytest-asyncio>=0.21.0
 # black>=23.0.0
 # mypy>=1.0.0

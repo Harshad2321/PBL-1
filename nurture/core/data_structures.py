@@ -24,7 +24,8 @@ import uuid
 
 from nurture.core.enums import (
     EmotionType, PersonalityTrait, ParentRole, InteractionType,
-    ResponseStrategy, ConflictStyle, MemoryType
+    ResponseStrategy, ConflictStyle, MemoryType, ActionType,
+    ContextType, ContextCategory, PatternType, WithdrawalLevel
 )
 
 
@@ -524,4 +525,273 @@ class DialogueContext:
         return "\n".join(
             f"{ex['speaker']}: {ex['message']}" 
             for ex in self.recent_history
+        )
+
+
+# =============================================================================
+# MOTHER AI PERSONALITY SYSTEM DATA STRUCTURES
+# =============================================================================
+
+@dataclass
+class PlayerAction:
+    """
+    Represents a single player action for pattern tracking.
+    
+    Actions are recorded with timestamps and context to enable
+    pattern detection and trust dynamics calculations.
+    
+    Attributes:
+        action_type: Type of action performed
+        context: Whether action occurred in public or private
+        emotional_valence: Emotional impact (-1.0 to 1.0)
+        timestamp: When the action occurred
+        metadata: Additional context-specific data
+    """
+    action_type: ActionType
+    context: ContextType
+    emotional_valence: float  # -1.0 to 1.0
+    timestamp: datetime = field(default_factory=datetime.now)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize player action to dictionary."""
+        return {
+            "action_type": self.action_type.value,
+            "context": self.context.value,
+            "emotional_valence": self.emotional_valence,
+            "timestamp": self.timestamp.isoformat(),
+            "metadata": self.metadata,
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'PlayerAction':
+        """Deserialize player action from dictionary."""
+        return cls(
+            action_type=ActionType(data["action_type"]),
+            context=ContextType(data["context"]),
+            emotional_valence=data["emotional_valence"],
+            timestamp=datetime.fromisoformat(data["timestamp"]),
+            metadata=data.get("metadata", {}),
+        )
+
+
+@dataclass
+class BehaviorPattern:
+    """
+    Represents a detected behavioral pattern.
+    
+    Patterns are sequences of similar actions that occur repeatedly
+    within a time window. They have more impact than isolated actions.
+    
+    Attributes:
+        pattern_type: Type of pattern detected
+        occurrences: List of actions that form this pattern
+        frequency: How often pattern occurs (actions per day)
+        weight: Current weight of pattern (decreases as broken)
+        first_seen: When pattern was first detected
+        last_seen: When pattern last occurred
+    """
+    pattern_type: PatternType
+    occurrences: List[PlayerAction] = field(default_factory=list)
+    frequency: float = 0.0
+    weight: float = 1.0  # Decreases as pattern is broken
+    first_seen: datetime = field(default_factory=datetime.now)
+    last_seen: datetime = field(default_factory=datetime.now)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize behavior pattern to dictionary."""
+        return {
+            "pattern_type": self.pattern_type.value,
+            "occurrences": [a.to_dict() for a in self.occurrences],
+            "frequency": self.frequency,
+            "weight": self.weight,
+            "first_seen": self.first_seen.isoformat(),
+            "last_seen": self.last_seen.isoformat(),
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'BehaviorPattern':
+        """Deserialize behavior pattern from dictionary."""
+        return cls(
+            pattern_type=PatternType(data["pattern_type"]),
+            occurrences=[PlayerAction.from_dict(a) for a in data.get("occurrences", [])],
+            frequency=data.get("frequency", 0.0),
+            weight=data.get("weight", 1.0),
+            first_seen=datetime.fromisoformat(data["first_seen"]),
+            last_seen=datetime.fromisoformat(data["last_seen"]),
+        )
+
+
+@dataclass
+class EmotionalImpact:
+    """
+    Represents the emotional impact of an interaction.
+    
+    Stores how an interaction made the Mother AI feel, not what was said.
+    
+    Attributes:
+        primary_emotion: The dominant emotion felt
+        intensity: How strongly the emotion was felt (0.0 to 1.0)
+        valence: Overall positive/negative feeling (-1.0 to 1.0)
+        context_category: Broader category of the interaction
+    """
+    primary_emotion: EmotionType
+    intensity: float  # 0.0 to 1.0
+    valence: float  # -1.0 (negative) to 1.0 (positive)
+    context_category: ContextCategory
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize emotional impact to dictionary."""
+        return {
+            "primary_emotion": self.primary_emotion.value,
+            "intensity": self.intensity,
+            "valence": self.valence,
+            "context_category": self.context_category.value,
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'EmotionalImpact':
+        """Deserialize emotional impact from dictionary."""
+        return cls(
+            primary_emotion=EmotionType(data["primary_emotion"]),
+            intensity=data["intensity"],
+            valence=data["valence"],
+            context_category=ContextCategory(data["context_category"]),
+        )
+
+
+@dataclass
+class EmotionalMemory:
+    """
+    A memory of how an interaction felt.
+    
+    Emotional memories store the feeling rather than verbatim content,
+    and are weighted by recency for recall.
+    
+    Attributes:
+        emotional_impact: How the interaction felt
+        timestamp: When the interaction occurred
+        context: Public or private context
+        weight: Current weight (decreases with time)
+        associated_patterns: Patterns active during this memory
+    """
+    emotional_impact: EmotionalImpact
+    timestamp: datetime = field(default_factory=datetime.now)
+    context: ContextType = ContextType.PRIVATE
+    weight: float = 1.0  # Decreases with time
+    associated_patterns: List[PatternType] = field(default_factory=list)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize emotional memory to dictionary."""
+        return {
+            "emotional_impact": self.emotional_impact.to_dict(),
+            "timestamp": self.timestamp.isoformat(),
+            "context": self.context.value,
+            "weight": self.weight,
+            "associated_patterns": [p.value for p in self.associated_patterns],
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'EmotionalMemory':
+        """Deserialize emotional memory from dictionary."""
+        return cls(
+            emotional_impact=EmotionalImpact.from_dict(data["emotional_impact"]),
+            timestamp=datetime.fromisoformat(data["timestamp"]),
+            context=ContextType(data["context"]),
+            weight=data.get("weight", 1.0),
+            associated_patterns=[PatternType(p) for p in data.get("associated_patterns", [])],
+        )
+
+
+@dataclass
+class ResponseModifiers:
+    """
+    Modifiers for response generation based on personality state.
+    
+    These values adjust how the Mother AI responds based on current
+    trust, resentment, and emotional state.
+    
+    Attributes:
+        response_length_multiplier: Multiplier for response length (0.3 to 1.0)
+        initiation_probability: Probability of initiating interaction (0.0 to 1.0)
+        cooperation_level: Willingness to cooperate (0.0 to 1.0)
+        emotional_vulnerability: Willingness to be emotionally open (0.0 to 1.0)
+        interpretation_bias: How to interpret ambiguous actions (-1.0 to 1.0)
+    """
+    response_length_multiplier: float = 1.0  # 0.3 to 1.0
+    initiation_probability: float = 1.0  # 0.0 to 1.0
+    cooperation_level: float = 1.0  # 0.0 to 1.0
+    emotional_vulnerability: float = 1.0  # 0.0 to 1.0
+    interpretation_bias: float = 0.0  # -1.0 (negative) to 1.0 (positive)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize response modifiers to dictionary."""
+        return {
+            "response_length_multiplier": self.response_length_multiplier,
+            "initiation_probability": self.initiation_probability,
+            "cooperation_level": self.cooperation_level,
+            "emotional_vulnerability": self.emotional_vulnerability,
+            "interpretation_bias": self.interpretation_bias,
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'ResponseModifiers':
+        """Deserialize response modifiers from dictionary."""
+        return cls(
+            response_length_multiplier=data.get("response_length_multiplier", 1.0),
+            initiation_probability=data.get("initiation_probability", 1.0),
+            cooperation_level=data.get("cooperation_level", 1.0),
+            emotional_vulnerability=data.get("emotional_vulnerability", 1.0),
+            interpretation_bias=data.get("interpretation_bias", 0.0),
+        )
+
+
+@dataclass
+class RelationshipMetrics:
+    """
+    Comprehensive snapshot of relationship state.
+    
+    Tracks all key metrics that define the current state of the
+    relationship between player and Mother AI.
+    
+    Attributes:
+        trust_score: Trust level (0.0 to 100.0)
+        resentment_score: Accumulated resentment (0.0 to 100.0)
+        emotional_safety: Perceived emotional safety (0.0 to 100.0)
+        parenting_unity: Alignment in parenting (0.0 to 100.0)
+        player_reliability: How reliable player is perceived (0.0 to 1.0)
+        cooperation_level: Current cooperation level (0.0 to 1.0)
+        last_updated: When metrics were last updated
+    """
+    trust_score: float = 70.0  # 0.0 to 100.0
+    resentment_score: float = 0.0  # 0.0 to 100.0
+    emotional_safety: float = 70.0  # 0.0 to 100.0
+    parenting_unity: float = 80.0  # 0.0 to 100.0
+    player_reliability: float = 0.7  # 0.0 to 1.0
+    cooperation_level: float = 1.0  # 0.0 to 1.0
+    last_updated: datetime = field(default_factory=datetime.now)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize relationship metrics to dictionary."""
+        return {
+            "trust_score": self.trust_score,
+            "resentment_score": self.resentment_score,
+            "emotional_safety": self.emotional_safety,
+            "parenting_unity": self.parenting_unity,
+            "player_reliability": self.player_reliability,
+            "cooperation_level": self.cooperation_level,
+            "last_updated": self.last_updated.isoformat(),
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'RelationshipMetrics':
+        """Deserialize relationship metrics from dictionary."""
+        return cls(
+            trust_score=data.get("trust_score", 70.0),
+            resentment_score=data.get("resentment_score", 0.0),
+            emotional_safety=data.get("emotional_safety", 70.0),
+            parenting_unity=data.get("parenting_unity", 80.0),
+            player_reliability=data.get("player_reliability", 0.7),
+            cooperation_level=data.get("cooperation_level", 1.0),
+            last_updated=datetime.fromisoformat(data.get("last_updated", datetime.now().isoformat())),
         )

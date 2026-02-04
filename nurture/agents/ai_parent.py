@@ -19,15 +19,17 @@ import random
 
 from nurture.agents.base_parent import BaseParent
 from nurture.core.data_structures import (
-    ParentState, PersonalityProfile, DialogueContext, EmotionalState
+    ParentState, PersonalityProfile, DialogueContext, EmotionalState,
+    EmotionalImpact
 )
 from nurture.core.enums import (
     ParentRole, EmotionType, PersonalityTrait, ResponseStrategy,
-    ConflictStyle, InteractionType, MemoryType
+    ConflictStyle, InteractionType, MemoryType, ContextType, ContextCategory
 )
 from nurture.core.events import Event, EventType, get_event_bus
 from nurture.core.learning_system import AdaptiveLearningEngine
 from nurture.memory.memory_store import MemoryStore, Memory
+from nurture.personality.emotional_memory import EmotionalMemorySystem
 
 
 class AIParent(BaseParent):
@@ -83,6 +85,9 @@ class AIParent(BaseParent):
         
         # Learning system - AI learns from player interactions
         self._learning_engine = AdaptiveLearningEngine(agent_id=state.id)
+        
+        # NEW: Emotional Memory System - stores how interactions felt
+        self._emotional_memory = EmotionalMemorySystem(max_capacity=1000)
     
     @property
     def personality(self) -> PersonalityProfile:
@@ -147,6 +152,9 @@ class AIParent(BaseParent):
             tags=set(analysis.get("tags", ["conversation"])),
             associated_agent_id=context.player_state.get("id") if context and context.player_state else None,
         )
+        
+        # NEW: Store emotional memory (how this felt, not what was said)
+        self._store_emotional_memory(message, analysis, context)
         
         # Publish event
         self._event_bus.publish(Event(
@@ -543,44 +551,33 @@ class AIParent(BaseParent):
         dom_emotion, dom_intensity = self.emotional_state.get_dominant_emotion()
         
         prompt_parts = [
-            f"You are {self.name}, a {self.role.value} in a family.",
-            "",
-            "PERSONALITY:",
-            f"- Warmth: {self.personality.get_trait(PersonalityTrait.WARMTH):.1f}/1.0",
-            f"- Patience: {self.personality.get_trait(PersonalityTrait.PATIENCE):.1f}/1.0",
-            f"- Strictness: {self.personality.get_trait(PersonalityTrait.STRICTNESS):.1f}/1.0",
-            "",
-            "CURRENT EMOTIONAL STATE:",
-            f"- Dominant emotion: {dom_emotion.value} ({dom_intensity:.1f})",
-            f"- Stress level: {self.emotional_state.stress_level:.1f}",
-            f"- Overall mood: {'positive' if self.emotional_state.get_valence() > 0 else 'negative'}",
-            "",
-            f"RESPONSE STRATEGY: {self._current_strategy.value}",
+            f"You are {self.name}, a {self.role.value}.",
+            f"Feeling: {dom_emotion.value} (stress: {self.emotional_state.stress_level:.1f})",
+            f"Strategy: {self._current_strategy.value}",
         ]
+        
+        # NEW: Add ONLY the most important emotional memory insight (1 line max)
+        recent_memories = self._emotional_memory.get_recent_memories(hours=24, limit=2)
+        if recent_memories and len(recent_memories) > 0:
+            avg_valence = sum(m.emotional_impact.valence for m in recent_memories) / len(recent_memories)
+            if avg_valence < -0.3:
+                prompt_parts.append("Recent interactions felt hurtful.")
+            elif avg_valence > 0.3:
+                prompt_parts.append("Recent interactions felt warm.")
+        
+        prompt_parts.append("")
         
         if context:
             prompt_parts.extend([
-                "",
-                f"SCENARIO: {context.scenario_name}",
-                f"SITUATION: {context.scenario_description}",
-                "",
-                "RECENT CONVERSATION:",
-                context.get_formatted_history(),
-                "",
-                f"Partner just said: \"{context.player_message}\"",
+                f"Scenario: {context.scenario_name}",
+                f"Partner: \"{context.player_message}\"",
             ])
         else:
-            prompt_parts.extend([
-                "",
-                f"Partner just said: \"{self._last_player_message}\"",
-            ])
+            prompt_parts.append(f"Partner: \"{self._last_player_message}\"")
         
         prompt_parts.extend([
             "",
-            "Generate a natural, in-character response. Be concise (1-3 sentences).",
-            "Match the emotional tone to your state and strategy.",
-            "",
-            "Your response:"
+            "Respond naturally in 1-2 sentences:",
         ])
         
         return "\n".join(prompt_parts)
@@ -667,6 +664,50 @@ class AIParent(BaseParent):
         if self._current_strategy == ResponseStrategy.AVOIDANT:
             self.update_emotion(EmotionType.GUILT, 0.03)
     
+    def _store_emotional_memory(
+        self,
+        message: str,
+        analysis: Dict[str, Any],
+        context: Optional[DialogueContext] = None
+    ) -> None:
+        """
+        Store emotional memory of how this interaction felt.
+        
+        Args:
+            message: The player's message
+            analysis: Message analysis
+            context: Dialogue context
+        """
+        # Determine primary emotion from current state
+        dom_emotion, intensity = self.emotional_state.get_dominant_emotion()
+        
+        # Determine context category
+        if analysis.get("is_accusation") or "conflict" in analysis.get("tags", []):
+            category = ContextCategory.CONFLICT
+        elif analysis.get("is_supportive") or "positive" in analysis.get("tags", []):
+            category = ContextCategory.SUPPORT
+        elif "child" in analysis.get("topics", []):
+            category = ContextCategory.PARENTING
+        else:
+            category = ContextCategory.INTIMACY
+        
+        # Create emotional impact
+        impact = EmotionalImpact(
+            primary_emotion=dom_emotion,
+            intensity=intensity,
+            valence=analysis.get("sentiment", 0.0),
+            context_category=category
+        )
+        
+        # Store the memory (without verbatim text)
+        self._emotional_memory.store_memory(
+            interaction_id=f"interaction_{datetime.now().timestamp()}",
+            emotional_impact=impact,
+            context=ContextType.PRIVATE,  # Assume private for now
+            associated_patterns=[],
+            timestamp=datetime.now()
+        )
+    
     def set_llm_generator(self, generator: Callable[[str], str]) -> None:
         """
         Set the LLM generator function.
@@ -691,12 +732,20 @@ class AIParent(BaseParent):
         Returns:
             Dictionary with relationship metrics
         """
+        # Get emotional memory stats
+        memory_stats = self._emotional_memory.get_memory_stats()
+        
         return {
             "trust_in_partner": self._trust_in_partner,
             "respect_for_partner": self._respect_for_partner,
             "perceived_partner_stress": self._perceived_partner_stress,
             "agreement_streak": self._agreement_streak,
             "disagreement_streak": self._disagreement_streak,
+            # NEW: Add emotional memory insights
+            "total_emotional_memories": memory_stats.get("total_memories", 0),
+            "average_emotional_valence": memory_stats.get("average_valence", 0.0),
+            "support_feeling": self._emotional_memory.get_average_valence(ContextCategory.SUPPORT, days=7),
+            "conflict_feeling": self._emotional_memory.get_average_valence(ContextCategory.CONFLICT, days=7),
         }
     
     def adjust_personality_slightly(self, trait: PersonalityTrait, delta: float) -> None:
@@ -718,6 +767,7 @@ class AIParent(BaseParent):
             "respect_for_partner": self._respect_for_partner,
             "agreement_streak": self._agreement_streak,
             "disagreement_streak": self._disagreement_streak,
+            "emotional_memory": self._emotional_memory.to_dict(),  # NEW: Save emotional memories
         }
     
     def learn_from_outcome(self, user_input: str, ai_response: str, outcome_quality: float = 0.5) -> None:
@@ -762,4 +812,9 @@ class AIParent(BaseParent):
         ai._respect_for_partner = data.get("respect_for_partner", 0.7)
         ai._agreement_streak = data.get("agreement_streak", 0)
         ai._disagreement_streak = data.get("disagreement_streak", 0)
+        
+        # NEW: Restore emotional memories
+        if "emotional_memory" in data:
+            ai._emotional_memory = EmotionalMemorySystem.from_dict(data["emotional_memory"])
+        
         return ai

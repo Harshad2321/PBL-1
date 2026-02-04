@@ -1,0 +1,4 @@
+# file: C:\Users\ParthK\Documents\GitHub\PBL-1\nurture\personality\trust_dynamics.py
+# hypothesis_version: 6.151.4
+
+[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 1.0, 1.5, 2.0, 3.0, 4.0, 7.0, 10.0, 30.0, 40.0, 50.0, 60.0, 70.0, 100.0, 'TrustDynamicsEngine', 'action_oriented', 'apology_records', 'behavior_type', 'defensive', 'effectiveness', 'generic', 'genuine', 'is_genuine', 'last_recurrence', 'recurrence_count', 'resentment_score', 'timestamp', 'trust_score']

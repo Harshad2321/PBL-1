@@ -191,3 +191,77 @@ class MemoryType(Enum):
     CONFLICT = "conflict"              # Disagreements
     POSITIVE = "positive"              # Good experiences
     PATTERN = "pattern"                # Learned behavioral patterns
+
+
+class ActionType(Enum):
+    """
+    Types of player actions tracked by the Mother AI personality system.
+    
+    These actions are monitored for pattern detection and influence
+    trust dynamics, resentment accumulation, and relationship state.
+    """
+    SUPPORT = "support"
+    CONFLICT_ENGAGE = "conflict_engage"
+    CONFLICT_AVOID = "conflict_avoid"
+    PARENTING_PRESENT = "parenting_present"
+    PARENTING_ABSENT = "parenting_absent"
+    CONTROL_TAKING = "control_taking"
+    EMPATHY_SHOWN = "empathy_shown"
+    EMPATHY_LACKING = "empathy_lacking"
+    PUBLIC_SUPPORT = "public_support"
+    PUBLIC_CONTRADICTION = "public_contradiction"
+    APOLOGY = "apology"
+    STRESS_ACKNOWLEDGE = "stress_acknowledge"
+    STRESS_IGNORE = "stress_ignore"
+
+
+class ContextType(Enum):
+    """
+    Context in which an interaction occurs.
+    
+    Public context (in front of child or others) has different
+    impact than private context (between partners alone).
+    """
+    PUBLIC = "public"      # In front of child or others
+    PRIVATE = "private"    # Between player and Mother AI alone
+
+
+class ContextCategory(Enum):
+    """
+    Categorical grouping of interaction contexts for emotional memory.
+    
+    Used to associate emotional memories with broader themes.
+    """
+    SUPPORT = "support"
+    CONFLICT = "conflict"
+    PARENTING = "parenting"
+    INTIMACY = "intimacy"
+
+
+class PatternType(Enum):
+    """
+    Types of behavioral patterns detected over time.
+    
+    Patterns are identified when actions repeat within time windows
+    and influence trust, resentment, and relationship dynamics.
+    """
+    CONSISTENT_PRESENCE = "consistent_presence"
+    SPORADIC_INVOLVEMENT = "sporadic_involvement"
+    REPEATED_AVOIDANCE = "repeated_avoidance"
+    CONTROL_TAKING = "control_taking"
+    EMPATHETIC_SUPPORT = "empathetic_support"
+    PUBLIC_UNITY = "public_unity"
+    PUBLIC_UNDERMINING = "public_undermining"
+
+
+class WithdrawalLevel(IntEnum):
+    """
+    Severity levels of emotional withdrawal state.
+    
+    Higher withdrawal levels result in reduced engagement,
+    shorter responses, and less emotional vulnerability.
+    """
+    NONE = 0       # Trust > 50
+    MILD = 1       # Trust 40-50
+    MODERATE = 2   # Trust 30-40
+    SEVERE = 3     # Trust < 30
