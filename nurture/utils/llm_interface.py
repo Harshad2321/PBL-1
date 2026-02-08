@@ -804,7 +804,7 @@ Sarah responds (short, real, no therapy talk):"""
                 "options": {
                     "temperature": 0.7,  # More creative responses
                     "top_p": 0.9,
-                    "num_predict": 150,  # Limit response length
+                    "num_predict": 80,  # Limit response length for faster replies
                 }
             }
             

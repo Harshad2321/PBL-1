@@ -151,17 +151,17 @@ class NurtureGame:
             memory_store=MemoryStore("ai_partner")
         )
         
-        # Set up LLM with Ollama (mannix/llama3-12b)
+        # Set up LLM with Ollama (mistral:7b-instruct)
         llm_generator = None
         
-        print("[*] Connecting to Ollama (mannix/llama3-12b)...")
+        print("[*] Connecting to Ollama (mistral:7b-instruct)...")
         try:
             llm_generator = create_llm_generator(
                 provider="ollama",
-                model_name="mannix/llama3-12b:latest",
-                timeout=60
+                model_name="mistral:7b-instruct-v0.3-q4_K_M",
+                timeout=120
             )
-            print("[OK] Ollama connected with mannix/llama3-12b model!")
+            print("[OK] Ollama connected with mistral:7b-instruct model!")
             print("    Responses will be natural and context-aware.")
         except Exception as e:
             print(f"[!] Ollama not available: {e}")
