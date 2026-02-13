@@ -1,8 +1,3 @@
-"""Story Management Module
-
-Handles narrative progression, scenario delivery, and story state management.
-"""
-
 from nurture.story.story_engine import StoryEngine, StoryProgress
 from nurture.story.story_data import (
     ActPhase,

@@ -1,38 +1,13 @@
-"""
-Emotional Rules for Nurture Simulation
-=======================================
-
-Specialized rules for emotional state management and regulation.
-These rules govern how emotions change, decay, and influence behavior.
-"""
-
 from typing import Dict, Any, List
 from nurture.rules.rule_engine import Rule, RuleCategory, RulePriority
 
-
 class EmotionalRules:
-    """
-    Collection of rules for emotional state management.
-    
-    Provides:
-    - Emotion regulation rules
-    - Emotion interaction rules (how emotions affect each other)
-    - Context-based emotional responses
-    - Emotional recovery patterns
-    """
-    
+
     @staticmethod
     def get_all_rules() -> List[Rule]:
-        """
-        Get all emotional regulation rules.
-        
-        Returns:
-            List of Rule objects
-        """
         rules = []
-        
-        # === EMOTION REGULATION ===
-        
+
+
         rules.append(Rule(
             id="emotional_regulation_capacity",
             name="Emotional Regulation",
@@ -49,7 +24,7 @@ class EmotionalRules:
                 "maintain_composure": True
             }
         ))
-        
+
         rules.append(Rule(
             id="low_regulation_volatility",
             name="Low Regulation Volatility",
@@ -63,9 +38,8 @@ class EmotionalRules:
                 "volatility_warning": True
             }
         ))
-        
-        # === EMOTION INTERACTIONS ===
-        
+
+
         rules.append(Rule(
             id="anger_suppresses_fear",
             name="Anger Suppresses Fear",
@@ -78,7 +52,7 @@ class EmotionalRules:
                 "anxiety_reduction": 0.1
             }
         ))
-        
+
         rules.append(Rule(
             id="trust_reduces_anxiety",
             name="Trust Reduces Anxiety",
@@ -92,7 +66,7 @@ class EmotionalRules:
                 "security_feeling": True
             }
         ))
-        
+
         rules.append(Rule(
             id="sadness_reduces_anger",
             name="Sadness Reduces Anger",
@@ -105,7 +79,7 @@ class EmotionalRules:
                 "withdrawal_tendency": True
             }
         ))
-        
+
         rules.append(Rule(
             id="joy_reduces_negative_emotions",
             name="Joy Reduces Negative Emotions",
@@ -120,9 +94,8 @@ class EmotionalRules:
                 "positive_outlook": True
             }
         ))
-        
-        # === STRESS EFFECTS ===
-        
+
+
         rules.append(Rule(
             id="chronic_stress_effects",
             name="Chronic Stress Effects",
@@ -131,7 +104,7 @@ class EmotionalRules:
             priority=RulePriority.HIGH,
             condition=lambda ctx: (
                 ctx.get("stress_level", 0) > 0.7 and
-                ctx.get("stress_duration", 0) > 3  # Interactions
+                ctx.get("stress_duration", 0) > 3
             ),
             action=lambda ctx: {
                 "patience_penalty": 0.2,
@@ -140,7 +113,7 @@ class EmotionalRules:
                 "exhaustion_flag": True
             }
         ))
-        
+
         rules.append(Rule(
             id="stress_recovery",
             name="Stress Recovery",
@@ -150,13 +123,12 @@ class EmotionalRules:
             condition=lambda ctx: ctx.get("stress_level", 0) < 0.3,
             action=lambda ctx: {
                 "allow_recovery": True,
-                "recovery_rate": 1.2,  # Faster than normal
+                "recovery_rate": 1.2,
                 "contentment_boost": 0.05
             }
         ))
-        
-        # === EMOTIONAL MEMORY EFFECTS ===
-        
+
+
         rules.append(Rule(
             id="negative_memory_activation",
             name="Negative Memory Activation",
@@ -170,7 +142,7 @@ class EmotionalRules:
                 "rumination_risk": True
             }
         ))
-        
+
         rules.append(Rule(
             id="positive_memory_activation",
             name="Positive Memory Activation",
@@ -184,9 +156,8 @@ class EmotionalRules:
                 "optimism_boost": True
             }
         ))
-        
-        # === EMOTIONAL CONTAGION ===
-        
+
+
         rules.append(Rule(
             id="emotional_contagion_positive",
             name="Positive Emotional Contagion",
@@ -202,7 +173,7 @@ class EmotionalRules:
                 "contagion_type": "positive"
             }
         ))
-        
+
         rules.append(Rule(
             id="emotional_contagion_negative",
             name="Negative Emotional Contagion",
@@ -219,9 +190,8 @@ class EmotionalRules:
                 "support_urge": True
             }
         ))
-        
-        # === EMOTIONAL THRESHOLDS ===
-        
+
+
         rules.append(Rule(
             id="emotional_overflow",
             name="Emotional Overflow",
@@ -236,51 +206,37 @@ class EmotionalRules:
                 "coherence_penalty": 0.2
             }
         ))
-        
+
         return rules
-    
+
     @staticmethod
     def calculate_emotion_interaction(
         emotions: Dict[str, float]
     ) -> Dict[str, float]:
-        """
-        Calculate how emotions interact and modify each other.
-        
-        Args:
-            emotions: Current emotion values
-            
-        Returns:
-            Modifications to apply to emotions
-        """
         modifications = {}
-        
+
         anger = emotions.get("anger", 0)
         sadness = emotions.get("sadness", 0)
         joy = emotions.get("joy", 0)
         fear = emotions.get("fear", 0)
         trust = emotions.get("trust", 0)
-        
-        # Anger and sadness are somewhat mutually exclusive
+
         if anger > 0.5 and sadness > 0.5:
-            # One tends to dominate
             if anger > sadness:
                 modifications["sadness"] = -0.1
             else:
                 modifications["anger"] = -0.1
-        
-        # Joy counteracts negative emotions
+
         if joy > 0.6:
             modifications["anger"] = -joy * 0.15
             modifications["sadness"] = -joy * 0.15
             modifications["fear"] = -joy * 0.1
-        
-        # Fear and anger can coexist but create anxiety
+
         if fear > 0.4 and anger > 0.4:
             modifications["anxiety"] = 0.1
-        
-        # High trust reduces fear
+
         if trust > 0.7:
             modifications["fear"] = -trust * 0.2
             modifications["anxiety"] = -trust * 0.15
-        
+
         return modifications

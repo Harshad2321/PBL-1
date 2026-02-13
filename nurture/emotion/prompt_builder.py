@@ -1,11 +1,3 @@
-"""
-Prompt Builder Module
-======================
-
-Builds controlled LLM prompts based on emotional state and reaction mode.
-This is the key to getting realistic emotional responses from the LLM.
-"""
-
 from dataclasses import dataclass
 from typing import List, Optional, Dict
 import random
@@ -14,38 +6,23 @@ from nurture.emotion.emotion_state import EmotionState
 from nurture.emotion.perception import PerceptionResult, Sentiment, Intent
 from nurture.emotion.reaction_policy import ReactionMode, ReactionDecision
 
-
 @dataclass
 class BuiltPrompt:
-    """Result of prompt building."""
     system_prompt: str
     context_prompt: str
     full_prompt: str
     constraints: List[str]
     examples: List[str]
 
-
 class PromptBuilder:
-    """
-    Builds controlled prompts for the LLM based on emotional state.
-    
-    Key principles:
-    - Be explicit about emotional state
-    - Give specific behavioral instructions
-    - Provide DO and DON'T examples
-    - Constrain response style
-    """
-    
-    # Character identity
+
     CHARACTER_NAME = "Sarah"
-    
-    # Base persona (always included)
-    BASE_PERSONA = """You are Sarah, a 28-year-old new mother with a 4-month-old baby. 
+
+    BASE_PERSONA = """You are Sarah, a 28-year-old new mother with a 4-month-old baby.
 You're exhausted from sleepless nights. Your partner (the player) often doesn't help enough.
 You have real feelings that get hurt. You get angry. You get tired of always being understanding.
 You are NOT a therapist. You are NOT always calm. You are a real person with limits."""
 
-    # Mode-specific instructions
     MODE_INSTRUCTIONS = {
         ReactionMode.SUPPORTIVE: """
 CURRENT MOOD: Willing to connect, but wary.
@@ -166,7 +143,6 @@ TONE: "That... that really hurt." Quiet. Processing.
 """,
     }
 
-    # Emotion descriptors
     EMOTION_DESCRIPTORS = {
         'anger': {
             (0.0, 0.3): "calm",
@@ -200,7 +176,6 @@ TONE: "That... that really hurt." Quiet. Processing.
         },
     }
 
-    # DO NOT examples (what to avoid)
     ALWAYS_AVOID = [
         "Don't use therapy-speak like 'I hear you' or 'I appreciate you sharing'",
         "Don't always try to fix or calm things",
@@ -212,7 +187,6 @@ TONE: "That... that really hurt." Quiet. Processing.
         "Don't ask 'how can I help?' when you're the one who needs help",
     ]
 
-    # Example responses by mode
     EXAMPLE_RESPONSES = {
         ReactionMode.SUPPORTIVE: [
             "Okay. I hear you. But I need you to actually follow through this time.",
@@ -271,7 +245,6 @@ TONE: "That... that really hurt." Quiet. Processing.
     }
 
     def __init__(self):
-        """Initialize the prompt builder."""
         pass
 
     def build(
@@ -282,36 +255,18 @@ TONE: "That... that really hurt." Quiet. Processing.
         scenario_context: Optional[str] = None,
         conversation_history: Optional[List[Dict[str, str]]] = None,
     ) -> BuiltPrompt:
-        """
-        Build a complete prompt for the LLM.
-        
-        Args:
-            emotion_state: Current emotional state
-            reaction: Decided reaction mode
-            perception: Analysis of user input
-            scenario_context: Optional scenario description
-            conversation_history: Optional list of prior exchanges
-            
-        Returns:
-            BuiltPrompt with system prompt, context, and examples
-        """
-        # Build emotion description
         emotion_desc = self._describe_emotions(emotion_state)
-        
-        # Get mode instructions
+
         mode_instructions = self.MODE_INSTRUCTIONS.get(
-            reaction.mode, 
+            reaction.mode,
             self.MODE_INSTRUCTIONS[ReactionMode.COLD]
         )
-        
-        # Get example responses
+
         examples = self.EXAMPLE_RESPONSES.get(reaction.mode, [])
-        
-        # Build constraints
+
         constraints = self.ALWAYS_AVOID.copy()
         constraints.extend(self._get_mode_constraints(reaction.mode))
-        
-        # Build system prompt
+
         system_prompt = f"""{self.BASE_PERSONA}
 
 === YOUR CURRENT EMOTIONAL STATE ===
@@ -331,30 +286,28 @@ Response intensity: {reaction.intensity:.0%}
 === EXAMPLE RESPONSES FOR YOUR CURRENT MOOD ===
 {chr(10).join('- "' + e + '"' for e in examples[:3])}
 """
-        
-        # Build context prompt
+
         context_parts = []
-        
+
         if scenario_context:
             context_parts.append(f"SITUATION: {scenario_context}")
-        
+
         if conversation_history:
             context_parts.append("RECENT CONVERSATION:")
-            for msg in conversation_history[-5:]:  # Last 5 exchanges
+            for msg in conversation_history[-5:]:
                 role = msg.get('role', 'unknown')
                 content = msg.get('content', '')
                 if role == 'user':
                     context_parts.append(f"  Partner: {content}")
                 else:
                     context_parts.append(f"  Sarah: {content}")
-        
+
         context_parts.append(f"\nPartner just said something {perception.sentiment.value}.")
-        
+
         context_prompt = "\n".join(context_parts)
-        
-        # Full prompt
+
         full_prompt = f"{system_prompt}\n\n{context_prompt}"
-        
+
         return BuiltPrompt(
             system_prompt=system_prompt,
             context_prompt=context_prompt,
@@ -364,10 +317,8 @@ Response intensity: {reaction.intensity:.0%}
         )
 
     def _describe_emotions(self, emotion_state: EmotionState) -> str:
-        """Create a narrative description of emotional state."""
         parts = []
-        
-        # Get descriptors for each emotion
+
         for emotion_name, ranges in self.EMOTION_DESCRIPTORS.items():
             if hasattr(emotion_state, emotion_name):
                 value = getattr(emotion_state, emotion_name)
@@ -375,45 +326,42 @@ Response intensity: {reaction.intensity:.0%}
                     if low <= value < high:
                         parts.append(f"You are {descriptor}")
                         break
-        
-        # Add dominant emotion emphasis
+
         dom_emotion, dom_value = emotion_state.get_dominant_emotion()
         if dom_value > 0.6:
             parts.append(f"Most prominently, you feel {dom_emotion}")
-        
-        # Add any extremes
+
         if emotion_state.fatigue > 0.7:
             parts.append("You're running on empty")
         if emotion_state.trust < 0.3:
             parts.append("You don't trust your partner right now")
         if emotion_state.hurt > 0.7:
             parts.append("You're carrying a lot of pain")
-        
+
         return ". ".join(parts) + "."
 
     def _get_mode_constraints(self, mode: ReactionMode) -> List[str]:
-        """Get additional constraints specific to the reaction mode."""
         constraints = []
-        
+
         if mode == ReactionMode.COLD:
             constraints.append("Responses must be under 10 words")
             constraints.append("No emotional expressions")
-        
+
         if mode == ReactionMode.WITHDRAWN:
             constraints.append("Responses must be under 5 words or just actions like *walks away*")
-        
+
         if mode == ReactionMode.CONFRONTATIONAL:
             constraints.append("Don't apologize")
             constraints.append("Don't back down")
-        
+
         if mode == ReactionMode.HURT:
             constraints.append("Show pain, don't attack")
             constraints.append("Vulnerability is okay")
-        
+
         if mode == ReactionMode.SARCASTIC:
             constraints.append("Be witty not cruel")
             constraints.append("Don't break character with obvious jokes")
-        
+
         return constraints
 
     def build_simple(
@@ -422,23 +370,12 @@ Response intensity: {reaction.intensity:.0%}
         mode: ReactionMode,
         intensity: float = 0.5
     ) -> str:
-        """
-        Build a simpler prompt for quick use.
-        
-        Args:
-            emotion_state: Current emotional state
-            mode: Reaction mode
-            intensity: Response intensity 0-1
-            
-        Returns:
-            Simple prompt string
-        """
         dom_emotion, dom_value = emotion_state.get_dominant_emotion()
         emotion_desc = emotion_state.describe()
-        
+
         examples = self.EXAMPLE_RESPONSES.get(mode, ["Fine."])
         example = random.choice(examples)
-        
+
         return f"""You are Sarah, an exhausted new mother.
 
 Current feelings: {emotion_desc}

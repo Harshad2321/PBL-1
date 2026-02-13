@@ -1,57 +1,37 @@
-"""
-Story Data Structures and Act Definitions
-
-Defines the narrative structure for all acts, including day-by-day scenarios,
-choices, and hidden impacts that shape the child's development.
-"""
-
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import List, Dict, Optional
 
-
 class ActPhase(Enum):
-    """Game acts representing child development stages."""
     FOUNDATION = "ACT 1 — FOUNDATION (Age 0–3)"
     MIRROR = "ACT 2 — MIRROR (Age 4–7)"
     FRACTURE = "ACT 3 — FRACTURE (Age 8–12)"
     RECKONING = "ACT 4 — RECKONING (Age 13–18)"
 
-
 @dataclass
 class PlayerChoice:
-    """A single choice available to the player."""
     choice_id: str
     text: str
     hidden_impact: List[str] = field(default_factory=list)
     impact_description: str = ""
 
-
 @dataclass
 class DayScenario:
-    """A single day's scenario within an act."""
     day: int
     title: str
     description: str
-    gameplay_time: str  # e.g., "~4 min"
-    scenario_text: str  # What's happening
+    gameplay_time: str
+    scenario_text: str
     choices: List[PlayerChoice] = field(default_factory=list)
-    hidden_impact_intro: str = ""  # What this day teaches the AI
-
+    hidden_impact_intro: str = ""
 
 @dataclass
 class ActData:
-    """Complete data for an act."""
     phase: ActPhase
     age_range: str
     total_days: int
     total_gameplay_hours: str
     days: List[DayScenario] = field(default_factory=list)
-
-
-# ============================================================================
-# ACT 1: FOUNDATION (Age 0-3)
-# ============================================================================
 
 ACT_1_DAYS = [
     DayScenario(
@@ -84,13 +64,13 @@ Your partner stares at you from their side of the bed, eyes pleading for sleep."
             ),
         ]
     ),
-    
+
     DayScenario(
         day=2,
         title="Visitors",
         description="Relatives visit and give unsolicited advice. Partner becomes uncomfortable.",
         gameplay_time="~4 min",
-        scenario_text="""Your mother-in-law has strong opinions about everything: feeding schedules, sleep training, 
+        scenario_text="""Your mother-in-law has strong opinions about everything: feeding schedules, sleep training,
 parenting style. Your partner shifts uncomfortably. You can feel the tension rising.
 'In our day, we just let babies cry it out,' she says, not unkindly.""",
         hidden_impact_intro="Changes partner's trust in you. Adds baseline household stress.",
@@ -115,7 +95,7 @@ parenting style. Your partner shifts uncomfortably. You can feel the tension ris
             ),
         ]
     ),
-    
+
     DayScenario(
         day=3,
         title="Money Talk",
@@ -146,13 +126,13 @@ Neither is wrong. Both feel the weight of impossible choices.""",
             ),
         ]
     ),
-    
+
     DayScenario(
         day=4,
         title="The First Fight",
         description="Sleep deprivation leads to a real argument. Voices are raised.",
         gameplay_time="~6 min",
-        scenario_text="""It starts small—a comment about dishes, about who did what yesterday. 
+        scenario_text="""It starts small—a comment about dishes, about who did what yesterday.
 But you're both at the breaking point. The tiredness, the stress, the weight of new life.
 Suddenly you're both shouting. And nearby, the baby cries.
 This is real. This is happening. And your child will remember the feeling.""",
@@ -178,7 +158,7 @@ This is real. This is happening. And your child will remember the feeling.""",
             ),
         ]
     ),
-    
+
     DayScenario(
         day=5,
         title="Quiet Morning",
@@ -210,7 +190,7 @@ Or you could just get through the care tasks. Either way, the day moves on.""",
             ),
         ]
     ),
-    
+
     DayScenario(
         day=6,
         title="Back to Work",
@@ -241,7 +221,7 @@ You need the income. You need the stability. But the cost is visible, and it hur
             ),
         ]
     ),
-    
+
     DayScenario(
         day=7,
         title="Missed Milestone",
@@ -272,7 +252,7 @@ Your partner sees your face fall. 'I know,' they say quietly. 'But someone shoul
             ),
         ]
     ),
-    
+
     DayScenario(
         day=8,
         title="Sick Night",
@@ -303,7 +283,7 @@ In this moment, you either move as one team, or you fracture.""",
             ),
         ]
     ),
-    
+
     DayScenario(
         day=9,
         title="First Words",
@@ -334,7 +314,7 @@ Your partner looks at you. This is a moment you both own, or it becomes one pare
             ),
         ]
     ),
-    
+
     DayScenario(
         day=10,
         title="Unspoken Distance",
@@ -365,7 +345,7 @@ You sit next to each other but feel far apart. The distance is comfortable in a 
             ),
         ]
     ),
-    
+
     DayScenario(
         day=11,
         title="Public Embarrassment",
@@ -396,7 +376,7 @@ Other parents are watching. Your child is confused about who's in charge.""",
             ),
         ]
     ),
-    
+
     DayScenario(
         day=12,
         title="Third Birthday",

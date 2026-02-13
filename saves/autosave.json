@@ -1,11 +1,11 @@
 {
-  "id": "4fce14b4-105f-4182-9314-f6e619e6e81f",
-  "created_at": "2026-02-08T13:33:04.200476",
-  "last_saved": "2026-02-08T13:38:04.390354",
+  "id": "3e392fd8-88c4-4101-a52a-66ea28391b40",
+  "created_at": "2026-02-13T23:56:30.998872",
+  "last_saved": "2026-02-14T00:02:31.655255",
   "player_parent": {
-    "id": "24fa94da-d2fe-49c3-8c45-ef45c3a0b036",
-    "role": "father",
-    "name": "Father",
+    "id": "0fa43356-725f-4761-b581-6a95580af0e3",
+    "role": "mother",
+    "name": "Mother",
     "is_player": true,
     "emotional_state": {
       "emotions": {
@@ -22,7 +22,7 @@
       "volatility": 0.3,
       "regulation_capacity": 0.6,
       "stress_level": 0.2,
-      "last_updated": "2026-02-08T13:33:04.200476"
+      "last_updated": "2026-02-13T23:56:30.997839"
     },
     "personality": {
       "traits": {
@@ -45,12 +45,12 @@
     "relationship_quality": 0.7,
     "behavioral_patterns": {},
     "current_strategy": null,
-    "created_at": "2026-02-08T13:33:04.200476"
+    "created_at": "2026-02-13T23:56:30.997839"
   },
   "ai_parent": {
-    "id": "bc3d8cf9-1629-4640-88e9-c56756e09752",
-    "role": "mother",
-    "name": "Mother",
+    "id": "dc96e562-92ee-429d-a586-fbf31aaecf9c",
+    "role": "father",
+    "name": "Father",
     "is_player": false,
     "emotional_state": {
       "emotions": {
@@ -67,7 +67,7 @@
       "volatility": 0.3,
       "regulation_capacity": 0.6,
       "stress_level": 0.2,
-      "last_updated": "2026-02-08T13:33:04.200476"
+      "last_updated": "2026-02-13T23:56:30.998872"
     },
     "personality": {
       "traits": {
@@ -90,17 +90,17 @@
     "relationship_quality": 0.7,
     "behavioral_patterns": {},
     "current_strategy": "supportive",
-    "created_at": "2026-02-08T13:33:04.200476"
+    "created_at": "2026-02-13T23:56:30.998872"
   },
   "interaction_history": [
     {
-      "id": "ec28758e-16da-4a64-9777-adeeca2fdcee",
-      "timestamp": "2026-02-08T13:34:05.659342",
+      "id": "6ef9c7c5-3fa9-46db-bc90-0f671e31ff5f",
+      "timestamp": "2026-02-13T23:56:40.052863",
       "interaction_type": "casual_conversation",
-      "initiator_id": "294aed12-e692-433d-bb23-764090bb647d",
-      "responder_id": "012560b0-edf2-4e64-af86-a63366a6d991",
+      "initiator_id": "b59ea5bb-244c-4f0e-81c5-b46cf6be43cf",
+      "responder_id": "60211ba6-b13f-413b-9cb8-eacbc3a77184",
       "initiator_message": "hi",
-      "responder_message": "Hi, I'm feeling a bit overwhelmed today. Could we talk about last night?",
+      "responder_message": "\"Hi, I'm a bit tired still but everything is okay. Thanks for getting up earlier.\"",
       "context": {
         "scenario": null,
         "turn": 0,
@@ -111,62 +111,24 @@
         "ai_valence": 0.1222222222222222
       },
       "relationship_impact": 0.005783333333333333
-    },
-    {
-      "id": "23d4be0f-d3ff-4677-b1a0-2c7eda5a119a",
-      "timestamp": "2026-02-08T13:35:11.382008",
-      "interaction_type": "casual_conversation",
-      "initiator_id": "294aed12-e692-433d-bb23-764090bb647d",
-      "responder_id": "012560b0-edf2-4e64-af86-a63366a6d991",
-      "initiator_message": "yes",
-      "responder_message": "\"Good, let's discuss last night then.\"",
-      "context": {
-        "scenario": null,
-        "turn": 1,
-        "tension": 0.0
-      },
-      "emotional_impact": {
-        "player_valence": 0.10723111111111111,
-        "ai_valence": 0.13266666666666665
-      },
-      "relationship_impact": 0.005997444444444444
-    },
-    {
-      "id": "56653ddb-64cf-4e61-a8bb-b92b93c104f6",
-      "timestamp": "2026-02-08T13:36:19.970235",
-      "interaction_type": "casual_conversation",
-      "initiator_id": "294aed12-e692-433d-bb23-764090bb647d",
-      "responder_id": "012560b0-edf2-4e64-af86-a63366a6d991",
-      "initiator_message": "tell me",
-      "responder_message": "\"I'm tired and I could use some support. Last night, I felt you waited for someone to get up for the baby. I need us to divide responsibilities equally.",
-      "context": {
-        "scenario": null,
-        "turn": 2,
-        "tension": 0.0
-      },
-      "emotional_impact": {
-        "player_valence": 0.10546391111111111,
-        "ai_valence": 0.14248444444444444
-      },
-      "relationship_impact": 0.006198708888888889
     }
   ],
   "current_scenario": "",
   "current_day": 2,
   "current_act": 1,
   "flags": {
-    "player_role": "father",
+    "player_role": "mother",
     "story_state": {
       "current_act": "ACT 1 \u2014 FOUNDATION (Age 0\u20133)",
       "current_day": 2,
       "total_acts_completed": 0,
       "choices_made": {
-        "day_1": "1_1_wait"
+        "day_1": "1_1_immediate"
       },
       "impacts_accumulated": [
-        "avoidance_low",
-        "responsibility_low",
-        "partnership_tension"
+        "responsibility_high",
+        "presence_high",
+        "attachment_security_positive"
       ]
     }
   },
@@ -174,7 +136,7 @@
     "relationship_quality": 0.7,
     "communication_score": 0.5,
     "conflict_count": 0,
-    "positive_interactions": 3,
+    "positive_interactions": 1,
     "negative_interactions": 0
   }
 }
