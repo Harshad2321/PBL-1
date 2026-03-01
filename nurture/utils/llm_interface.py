@@ -623,6 +623,9 @@ class LocalLLM(LLMInterface):
             system_parts.append(context["relationship_prompt"])
             system_parts.append("")
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         if is_first_message and grievance:
             system_parts.extend([

@@ -498,6 +498,9 @@ class InteractionManager:
             rel.conflict_intensity / 100.0,
         )
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         if self._on_state_updated:
             self._on_state_updated({

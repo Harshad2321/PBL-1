@@ -365,10 +365,15 @@ class NurtureGame:
         if not self.interaction_manager:
             return {}
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         
         return self.interaction_manager.get_relationship_status()
     
 =======
+=======
+
+        return self.interaction_manager.get_interaction_summary()
+>>>>>>> Stashed changes
 
         return self.interaction_manager.get_interaction_summary()
 
@@ -716,6 +721,9 @@ class NurtureGame:
         print(f"  │ Forgiveness {pers.forgiveness_rate:5.1f}  {d_forg:>12s}   Style: {pers.conflict_style.value:<15s}│")
         print(f"  └───────────────────────────────────────────────────────┘\n")
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
     def _handle_command(self, command: str) -> None:
         """Handle console commands."""
@@ -780,6 +788,9 @@ class NurtureGame:
                 print(f"  Defensiveness:    {pers.get('defensiveness', 0):5.1f}/100  {_bar(pers.get('defensiveness', 0))}")
                 print(f"  Forgiveness:      {pers.get('forgiveness_rate', 0):5.1f}/100  {_bar(pers.get('forgiveness_rate', 0))}")
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         elif cmd == "save":
             filepath = self.save_game()

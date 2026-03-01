@@ -100,6 +100,9 @@ class AIParent(BaseParent):
         self.ai_personality = AIPersonalityState()
         self._last_deltas: Dict[str, float] = {}
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
     @property
     def personality(self) -> PersonalityProfile:
@@ -184,6 +187,9 @@ class AIParent(BaseParent):
             scenario_stress=scenario_stress,
         )
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         self._event_bus.publish(Event(
             event_type=EventType.AI_STRATEGY_SELECTED,
@@ -540,6 +546,9 @@ class AIParent(BaseParent):
             self.relationship_state, self.ai_personality
         )
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         if self._llm_generator:
             prompt = self._build_llm_prompt(dialogue_context)
@@ -605,6 +614,9 @@ class AIParent(BaseParent):
         prompt_parts.append("")
         prompt_parts.append(rel_context)
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         recent_memories = self._emotional_memory.get_recent_memories(hours=24, limit=2)
         if recent_memories and len(recent_memories) > 0:
@@ -808,6 +820,9 @@ class AIParent(BaseParent):
             "ai_personality": self.ai_personality.to_dict(),
         }
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
     def adjust_personality_slightly(self, trait: PersonalityTrait, delta: float) -> None:
         """
@@ -834,6 +849,9 @@ class AIParent(BaseParent):
             "emotional_memory": self._emotional_memory.to_dict(),
             "relationship_state": self.relationship_state.to_dict(),
             "ai_personality": self.ai_personality.to_dict(),
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         }
     
@@ -892,5 +910,8 @@ class AIParent(BaseParent):
         if "ai_personality" in data:
             ai.ai_personality = AIPersonalityState.from_dict(data["ai_personality"])
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         return ai
