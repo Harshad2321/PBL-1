@@ -486,13 +486,26 @@ class InteractionManager:
         elif player_valence > 0.3 and ai_valence > 0.3:
             self._dialogue_context.tension_level = max(0.0,
                 self._dialogue_context.tension_level - 0.1)
+<<<<<<< Updated upstream
         
         # Callback
+=======
+
+        # ── sync tension_level with the new conflict_intensity ──
+        rel = self.ai.relationship_state
+        self._dialogue_context.tension_level = max(
+            self._dialogue_context.tension_level,
+            rel.conflict_intensity / 100.0,
+        )
+
+>>>>>>> Stashed changes
         if self._on_state_updated:
             self._on_state_updated({
                 "player": self.player.get_state_summary(),
                 "ai": self.ai.get_state_summary(),
                 "tension": self._dialogue_context.tension_level,
+                "relationship": rel.to_dict(),
+                "ai_personality": self.ai.ai_personality.to_dict(),
             })
     
     def _record_interaction(
@@ -570,6 +583,8 @@ class InteractionManager:
             "ai_state": self.ai.get_state_summary(),
             "relationship_quality": self.state_manager.session.metrics.get("relationship_quality", 0.7)
                                    if self.state_manager.session else 0.7,
+            "relationship_state": self.ai.relationship_state.to_dict(),
+            "ai_personality_state": self.ai.ai_personality.to_dict(),
         }
     
     def end_scenario(self) -> Dict[str, Any]:

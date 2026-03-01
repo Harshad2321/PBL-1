@@ -613,8 +613,17 @@ class LocalLLM(LLMInterface):
             "- You can be hurt, angry, cold, sarcastic, or confrontational.",
             "",
         ])
+<<<<<<< Updated upstream
         
         # Special instruction for first message
+=======
+
+        # ── NEW: inject live relationship / personality context if available ──
+        if context and context.get("relationship_prompt"):
+            system_parts.append(context["relationship_prompt"])
+            system_parts.append("")
+
+>>>>>>> Stashed changes
         if is_first_message and grievance:
             system_parts.extend([
                 "*** THIS IS THE START OF THE CONVERSATION ***",

@@ -364,9 +364,15 @@ class NurtureGame:
         """Get current relationship metrics."""
         if not self.interaction_manager:
             return {}
+<<<<<<< Updated upstream
         
         return self.interaction_manager.get_relationship_status()
     
+=======
+
+        return self.interaction_manager.get_interaction_summary()
+
+>>>>>>> Stashed changes
     def get_current_scenario(self) -> Dict[str, Any]:
         """Get the current day's scenario from the story."""
         if not self.story_engine:
@@ -651,6 +657,10 @@ class NurtureGame:
                                 # Get AI response
                                 response = self.send_message(message)
                                 print(f"\n{ai_role.value.title()}: {response}\n")
+
+                                # ── Show live variable changes ──
+                                if self.ai_parent:
+                                    self._show_live_stats()
                 except (ValueError, IndexError):
                     print("Invalid input. Enter 1-3 for choices or /command")
                 
@@ -662,8 +672,51 @@ class NurtureGame:
                 self._is_running = False
         
         print("\nThank you for playing Nurture!")
+<<<<<<< Updated upstream
         print("Your parenting story has been saved.\n")
     
+=======
+        print("Your progress has been saved. See you next time!\n")
+
+    def _show_live_stats(self) -> None:
+        """Print a compact one-box summary of relationship & personality after each message."""
+        if not self.ai_parent:
+            return
+        rel = self.ai_parent.relationship_state
+        pers = self.ai_parent.ai_personality
+        deltas = self.ai_parent._last_deltas
+
+        def _arrow(val):
+            if val > 0:
+                return f"\033[92m+{val:.1f}\033[0m"   # green
+            elif val < 0:
+                return f"\033[91m{val:.1f}\033[0m"     # red
+            return ""
+
+        d_trust = _arrow(deltas.get("trust", 0))
+        d_close = _arrow(deltas.get("emotional_closeness", 0))
+        d_resent = _arrow(deltas.get("resentment", 0))
+        d_conf = _arrow(deltas.get("conflict_intensity", 0))
+        d_open = _arrow(deltas.get("communication_openness", 0))
+        d_power = _arrow(deltas.get("power_balance", 0))
+
+        d_stress = _arrow(deltas.get("ai_stress_level", 0))
+        d_pat = _arrow(deltas.get("ai_patience", 0))
+        d_sup = _arrow(deltas.get("ai_supportiveness", 0))
+        d_def = _arrow(deltas.get("ai_defensiveness", 0))
+        d_forg = _arrow(deltas.get("ai_forgiveness_rate", 0))
+
+        print(f"  ┌─── Relationship ──────────────────────────────────────┐")
+        print(f"  │ Trust {rel.trust:5.1f}  {d_trust:>12s}   Closeness {rel.emotional_closeness:5.1f}  {d_close:>12s} │")
+        print(f"  │ Resentment {rel.resentment:5.1f}  {d_resent:>12s}   Conflict {rel.conflict_intensity:5.1f}  {d_conf:>12s}  │")
+        print(f"  │ Openness {rel.communication_openness:5.1f}  {d_open:>12s}   Power {rel.power_balance:+5.1f}  {d_power:>12s}    │")
+        print(f"  ├─── Partner Personality ────────────────────────────────┤")
+        print(f"  │ Stress {pers.stress_level:5.1f}  {d_stress:>12s}   Patience {pers.patience:5.1f}  {d_pat:>12s}  │")
+        print(f"  │ Supportive {pers.supportiveness:5.1f}  {d_sup:>12s}   Defensive {pers.defensiveness:5.1f}  {d_def:>12s} │")
+        print(f"  │ Forgiveness {pers.forgiveness_rate:5.1f}  {d_forg:>12s}   Style: {pers.conflict_style.value:<15s}│")
+        print(f"  └───────────────────────────────────────────────────────┘\n")
+
+>>>>>>> Stashed changes
     def _handle_command(self, command: str) -> None:
         """Handle console commands."""
         parts = command.split()
@@ -694,7 +747,40 @@ class NurtureGame:
                     print(f"  {key}: {value:.2f}")
                 else:
                     print(f"  {key}: {value}")
+<<<<<<< Updated upstream
         
+=======
+
+            # ── NEW: Show live Relationship & AI Personality variables ──
+            if self.ai_parent:
+                dyn = self.ai_parent.get_dynamic_state_summary()
+                rel = dyn.get("relationship", {})
+                pers = dyn.get("ai_personality", {})
+
+                print(f"\n=== Relationship State ({dyn.get('relationship_label', '')}) ===")
+                _bar = lambda v, mx=100: '█' * int(v / mx * 20) + '░' * (20 - int(v / mx * 20))
+                print(f"  Trust:            {rel.get('trust', 0):5.1f}/100  {_bar(rel.get('trust', 0))}")
+                print(f"  Closeness:        {rel.get('emotional_closeness', 0):5.1f}/100  {_bar(rel.get('emotional_closeness', 0))}")
+                print(f"  Resentment:       {rel.get('resentment', 0):5.1f}/100  {_bar(rel.get('resentment', 0))}")
+                print(f"  Conflict:         {rel.get('conflict_intensity', 0):5.1f}/100  {_bar(rel.get('conflict_intensity', 0))}")
+                print(f"  Openness:         {rel.get('communication_openness', 0):5.1f}/100  {_bar(rel.get('communication_openness', 0))}")
+                pb = rel.get('power_balance', 0)
+                if pb > 0:
+                    print(f"  Power Balance:    +{pb:.1f}  (you dominate)")
+                elif pb < 0:
+                    print(f"  Power Balance:    {pb:.1f}  (partner dominates)")
+                else:
+                    print(f"  Power Balance:     {pb:.1f}  (equal)")
+
+                print(f"\n=== AI Partner Personality ===")
+                print(f"  Stress:           {pers.get('stress_level', 0):5.1f}/100  {_bar(pers.get('stress_level', 0))}")
+                print(f"  Patience:         {pers.get('patience', 0):5.1f}/100  {_bar(pers.get('patience', 0))}")
+                print(f"  Conflict Style:   {pers.get('conflict_style', 'passive')}")
+                print(f"  Supportiveness:   {pers.get('supportiveness', 0):5.1f}/100  {_bar(pers.get('supportiveness', 0))}")
+                print(f"  Defensiveness:    {pers.get('defensiveness', 0):5.1f}/100  {_bar(pers.get('defensiveness', 0))}")
+                print(f"  Forgiveness:      {pers.get('forgiveness_rate', 0):5.1f}/100  {_bar(pers.get('forgiveness_rate', 0))}")
+
+>>>>>>> Stashed changes
         elif cmd == "save":
             filepath = self.save_game()
             print(f"[OK] Game saved to: {filepath}")

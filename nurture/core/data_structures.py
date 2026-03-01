@@ -25,13 +25,130 @@ import uuid
 from nurture.core.enums import (
     EmotionType, PersonalityTrait, ParentRole, InteractionType,
     ResponseStrategy, ConflictStyle, MemoryType, ActionType,
-    ContextType, ContextCategory, PatternType, WithdrawalLevel
+    ContextType, ContextCategory, PatternType, WithdrawalLevel,
+    AIConflictStyle
 )
 
 
+<<<<<<< Updated upstream
 # =============================================================================
 # EMOTIONAL STATE
 # =============================================================================
+=======
+# ── Relationship State (updated every message exchange) ──────────────────
+@dataclass
+class RelationshipState:
+    """Tracks the live relationship between the two parents.
+    Every variable is updated after each player message."""
+
+    trust: float = 60.0                   # 0-100  Will AI cooperate or resist
+    emotional_closeness: float = 60.0     # 0-100  Warmth vs coldness
+    resentment: float = 10.0              # 0-100  Passive aggression likelihood
+    conflict_intensity: float = 10.0      # 0-100  How fast fights escalate
+    communication_openness: float = 60.0  # 0-100  Honest talks vs avoidance
+    power_balance: float = 0.0            # -50 to +50  Who dominates decisions
+
+    def clamp(self) -> None:
+        """Keep every field inside its legal range."""
+        self.trust = max(0.0, min(100.0, self.trust))
+        self.emotional_closeness = max(0.0, min(100.0, self.emotional_closeness))
+        self.resentment = max(0.0, min(100.0, self.resentment))
+        self.conflict_intensity = max(0.0, min(100.0, self.conflict_intensity))
+        self.communication_openness = max(0.0, min(100.0, self.communication_openness))
+        self.power_balance = max(-50.0, min(50.0, self.power_balance))
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "trust": round(self.trust, 1),
+            "emotional_closeness": round(self.emotional_closeness, 1),
+            "resentment": round(self.resentment, 1),
+            "conflict_intensity": round(self.conflict_intensity, 1),
+            "communication_openness": round(self.communication_openness, 1),
+            "power_balance": round(self.power_balance, 1),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'RelationshipState':
+        return cls(
+            trust=data.get("trust", 60.0),
+            emotional_closeness=data.get("emotional_closeness", 60.0),
+            resentment=data.get("resentment", 10.0),
+            conflict_intensity=data.get("conflict_intensity", 10.0),
+            communication_openness=data.get("communication_openness", 60.0),
+            power_balance=data.get("power_balance", 0.0),
+        )
+
+    def get_mood_label(self) -> str:
+        """Return a human-readable summary of the relationship."""
+        if self.trust > 70 and self.resentment < 30:
+            return "Healthy & trusting"
+        elif self.resentment > 60:
+            return "Resentful & tense"
+        elif self.conflict_intensity > 60:
+            return "Volatile"
+        elif self.emotional_closeness < 30:
+            return "Cold & distant"
+        elif self.communication_openness < 30:
+            return "Avoidant"
+        else:
+            return "Stable but cautious"
+
+
+# ── AI Parent Personality (shifts slowly over many interactions) ──────────
+@dataclass
+class AIPersonalityState:
+    """Dynamic personality variables for the AI parent.
+    These drift slowly based on how the player treats them."""
+
+    stress_level: float = 25.0        # 0-100  Emotional reactions
+    patience: float = 65.0            # 0-100  Tolerance before snapping
+    conflict_style: AIConflictStyle = AIConflictStyle.PASSIVE  # avoidant / confrontational / passive
+    supportiveness: float = 65.0      # 0-100  Emotional availability
+    defensiveness: float = 20.0       # 0-100  Blame shifting
+    forgiveness_rate: float = 55.0    # 0-100  How fast trust recovers
+
+    def clamp(self) -> None:
+        self.stress_level = max(0.0, min(100.0, self.stress_level))
+        self.patience = max(0.0, min(100.0, self.patience))
+        self.supportiveness = max(0.0, min(100.0, self.supportiveness))
+        self.defensiveness = max(0.0, min(100.0, self.defensiveness))
+        self.forgiveness_rate = max(0.0, min(100.0, self.forgiveness_rate))
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "stress_level": round(self.stress_level, 1),
+            "patience": round(self.patience, 1),
+            "conflict_style": self.conflict_style.value,
+            "supportiveness": round(self.supportiveness, 1),
+            "defensiveness": round(self.defensiveness, 1),
+            "forgiveness_rate": round(self.forgiveness_rate, 1),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'AIPersonalityState':
+        return cls(
+            stress_level=data.get("stress_level", 25.0),
+            patience=data.get("patience", 65.0),
+            conflict_style=AIConflictStyle(data.get("conflict_style", "passive")),
+            supportiveness=data.get("supportiveness", 65.0),
+            defensiveness=data.get("defensiveness", 20.0),
+            forgiveness_rate=data.get("forgiveness_rate", 55.0),
+        )
+
+    def get_conflict_style_label(self) -> str:
+        if self.defensiveness > 60 and self.patience < 35:
+            return "confrontational"
+        elif self.patience > 60 and self.defensiveness < 30:
+            return "passive"
+        else:
+            return "avoidant"
+
+    def auto_update_conflict_style(self) -> None:
+        """Automatically shift conflict_style based on current stats."""
+        label = self.get_conflict_style_label()
+        self.conflict_style = AIConflictStyle(label)
+
+>>>>>>> Stashed changes
 
 @dataclass
 class EmotionalState:

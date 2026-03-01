@@ -1,0 +1,189 @@
+{
+  "id": "0c3f5d22-cafc-401b-bba0-7b5c92e9aa61",
+  "created_at": "2026-02-23T11:53:37.875484",
+  "last_saved": "2026-02-23T12:07:09.577188",
+  "player_parent": {
+    "id": "cb97843f-399a-40b9-a327-56cf00f084eb",
+    "role": "father",
+    "name": "Father",
+    "is_player": true,
+    "emotional_state": {
+      "emotions": {
+        "calm": 0.6,
+        "joy": 0.4,
+        "trust": 0.5,
+        "stress": 0.2,
+        "anxiety": 0.1,
+        "frustration": 0.1,
+        "anger": 0.0,
+        "sadness": 0.1
+      },
+      "baseline_mood": 0.5,
+      "volatility": 0.3,
+      "regulation_capacity": 0.6,
+      "stress_level": 0.2,
+      "last_updated": "2026-02-23T11:53:37.875455"
+    },
+    "personality": {
+      "traits": {
+        "strictness": 0.5,
+        "warmth": 0.6,
+        "patience": 0.5,
+        "flexibility": 0.5,
+        "expressiveness": 0.5,
+        "openness": 0.5,
+        "conscientiousness": 0.5,
+        "extraversion": 0.5,
+        "agreeableness": 0.5,
+        "neuroticism": 0.3
+      },
+      "conflict_style": "collaborative",
+      "communication_style": "balanced",
+      "adaptability": 0.3
+    },
+    "interaction_count": 0,
+    "relationship_quality": 0.7,
+    "behavioral_patterns": {},
+    "current_strategy": null,
+    "created_at": "2026-02-23T11:53:37.875458"
+  },
+  "ai_parent": {
+    "id": "3cb50382-26cd-4bb2-9720-760febb5d49b",
+    "role": "mother",
+    "name": "Mother",
+    "is_player": false,
+    "emotional_state": {
+      "emotions": {
+        "calm": 0.6,
+        "joy": 0.4,
+        "trust": 0.5,
+        "stress": 0.2,
+        "anxiety": 0.1,
+        "frustration": 0.1,
+        "anger": 0.0,
+        "sadness": 0.1
+      },
+      "baseline_mood": 0.5,
+      "volatility": 0.3,
+      "regulation_capacity": 0.6,
+      "stress_level": 0.2,
+      "last_updated": "2026-02-23T11:53:37.875473"
+    },
+    "personality": {
+      "traits": {
+        "strictness": 0.5,
+        "warmth": 0.6,
+        "patience": 0.5,
+        "flexibility": 0.5,
+        "expressiveness": 0.5,
+        "openness": 0.5,
+        "conscientiousness": 0.5,
+        "extraversion": 0.5,
+        "agreeableness": 0.5,
+        "neuroticism": 0.3
+      },
+      "conflict_style": "collaborative",
+      "communication_style": "balanced",
+      "adaptability": 0.3
+    },
+    "interaction_count": 0,
+    "relationship_quality": 0.7,
+    "behavioral_patterns": {},
+    "current_strategy": "supportive",
+    "created_at": "2026-02-23T11:53:37.875474"
+  },
+  "interaction_history": [
+    {
+      "id": "d2021ed5-219d-4a4f-894f-977dcee9f615",
+      "timestamp": "2026-02-23T11:53:54.329475",
+      "interaction_type": "casual_conversation",
+      "initiator_id": "450618e5-4d86-47ed-9c95-b72460848f06",
+      "responder_id": "15eef543-f1eb-41fa-b974-7c12dbd3bba3",
+      "initiator_message": "hello",
+      "responder_message": "\"Hey, I'm still tired from last night. Thanks for taking care of things.\"",
+      "context": {
+        "scenario": null,
+        "turn": 0,
+        "tension": 0.1
+      },
+      "emotional_impact": {
+        "player_valence": 0.1091111111111111,
+        "ai_valence": 0.12222222222222223
+      },
+      "relationship_impact": 0.005783333333333334
+    },
+    {
+      "id": "56437a25-f1d0-4322-9637-e61ff293d75c",
+      "timestamp": "2026-02-23T11:56:18.173392",
+      "interaction_type": "casual_conversation",
+      "initiator_id": "450618e5-4d86-47ed-9c95-b72460848f06",
+      "responder_id": "15eef543-f1eb-41fa-b974-7c12dbd3bba3",
+      "initiator_message": "how was the last night",
+      "responder_message": "\"Last night was tough. Baby wasn't feeling well.\"",
+      "context": {
+        "scenario": null,
+        "turn": 1,
+        "tension": 0.102
+      },
+      "emotional_impact": {
+        "player_valence": 0.10723111111111111,
+        "ai_valence": 0.13266666666666665
+      },
+      "relationship_impact": 0.005997444444444444
+    }
+  ],
+  "current_scenario": "",
+  "current_day": 9,
+  "current_act": 1,
+  "flags": {
+    "player_role": "father",
+    "story_state": {
+      "current_act": "ACT 1 \u2014 FOUNDATION (Age 0\u20133)",
+      "current_day": 9,
+      "total_acts_completed": 0,
+      "choices_made": {
+        "day_1": "1_1_wait",
+        "day_2": "1_2_defend",
+        "day_3": "1_3_work_more",
+        "day_4": "1_4_calm_down",
+        "day_5": "1_5_engage",
+        "day_6": "1_6_dismiss",
+        "day_7": "1_7_excuse",
+        "day_8": "1_8_control"
+      },
+      "impacts_accumulated": [
+        "avoidance_low",
+        "responsibility_low",
+        "partnership_tension",
+        "partnership_unity",
+        "boundary_setting",
+        "family_trust",
+        "work_prioritized",
+        "provider_role",
+        "future_absence_pattern",
+        "emotional_regulation",
+        "responsibility_for_safety",
+        "conflict_resolution_early",
+        "presence_quality_high",
+        "emotional_bonding",
+        "attunement",
+        "empathy_low",
+        "practicality_over_feeling",
+        "emotional_invalidation",
+        "rationalization",
+        "avoidance_of_regret",
+        "detachment_pattern",
+        "control_tendency",
+        "partnership_distrust",
+        "independence_over_unity"
+      ]
+    }
+  },
+  "metrics": {
+    "relationship_quality": 0.7,
+    "communication_score": 0.5,
+    "conflict_count": 0,
+    "positive_interactions": 2,
+    "negative_interactions": 0
+  }
+}

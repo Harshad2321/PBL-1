@@ -14,6 +14,13 @@ Design Philosophy:
 from enum import Enum, IntEnum, auto
 from typing import List
 
+<<<<<<< Updated upstream
+=======
+class AIConflictStyle(Enum):
+    AVOIDANT = "avoidant"
+    CONFRONTATIONAL = "confrontational"
+    PASSIVE = "passive"
+>>>>>>> Stashed changes
 
 class ParentRole(Enum):
     """
