@@ -1,7 +1,6 @@
 """
 Parent Interaction Manager
-===========================
-
+====================
 Manages turn-based conversations between Player Parent and AI Parent.
 Handles scenario context, dialogue history, state updates, and
 coordinates between the two parent agents.
@@ -486,22 +485,6 @@ class InteractionManager:
         elif player_valence > 0.3 and ai_valence > 0.3:
             self._dialogue_context.tension_level = max(0.0,
                 self._dialogue_context.tension_level - 0.1)
-<<<<<<< Updated upstream
-        
-        # Callback
-=======
-
-        # ── sync tension_level with the new conflict_intensity ──
-        rel = self.ai.relationship_state
-        self._dialogue_context.tension_level = max(
-            self._dialogue_context.tension_level,
-            rel.conflict_intensity / 100.0,
-        )
-
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
         if self._on_state_updated:
             self._on_state_updated({
                 "player": self.player.get_state_summary(),

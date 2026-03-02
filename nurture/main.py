@@ -364,20 +364,8 @@ class NurtureGame:
         """Get current relationship metrics."""
         if not self.interaction_manager:
             return {}
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
         
-        return self.interaction_manager.get_relationship_status()
-    
-=======
-=======
-
         return self.interaction_manager.get_interaction_summary()
->>>>>>> Stashed changes
-
-        return self.interaction_manager.get_interaction_summary()
-
->>>>>>> Stashed changes
     def get_current_scenario(self) -> Dict[str, Any]:
         """Get the current day's scenario from the story."""
         if not self.story_engine:
@@ -677,10 +665,6 @@ class NurtureGame:
                 self._is_running = False
         
         print("\nThank you for playing Nurture!")
-<<<<<<< Updated upstream
-        print("Your parenting story has been saved.\n")
-    
-=======
         print("Your progress has been saved. See you next time!\n")
 
     def _show_live_stats(self) -> None:
@@ -720,11 +704,6 @@ class NurtureGame:
         print(f"  │ Supportive {pers.supportiveness:5.1f}  {d_sup:>12s}   Defensive {pers.defensiveness:5.1f}  {d_def:>12s} │")
         print(f"  │ Forgiveness {pers.forgiveness_rate:5.1f}  {d_forg:>12s}   Style: {pers.conflict_style.value:<15s}│")
         print(f"  └───────────────────────────────────────────────────────┘\n")
-
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
     def _handle_command(self, command: str) -> None:
         """Handle console commands."""
         parts = command.split()
@@ -755,11 +734,8 @@ class NurtureGame:
                     print(f"  {key}: {value:.2f}")
                 else:
                     print(f"  {key}: {value}")
-<<<<<<< Updated upstream
-        
-=======
 
-            # ── NEW: Show live Relationship & AI Personality variables ──
+            # Show live Relationship & AI Personality variables
             if self.ai_parent:
                 dyn = self.ai_parent.get_dynamic_state_summary()
                 rel = dyn.get("relationship", {})
@@ -787,11 +763,6 @@ class NurtureGame:
                 print(f"  Supportiveness:   {pers.get('supportiveness', 0):5.1f}/100  {_bar(pers.get('supportiveness', 0))}")
                 print(f"  Defensiveness:    {pers.get('defensiveness', 0):5.1f}/100  {_bar(pers.get('defensiveness', 0))}")
                 print(f"  Forgiveness:      {pers.get('forgiveness_rate', 0):5.1f}/100  {_bar(pers.get('forgiveness_rate', 0))}")
-
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
         elif cmd == "save":
             filepath = self.save_game()
             print(f"[OK] Game saved to: {filepath}")

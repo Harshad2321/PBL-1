@@ -1,7 +1,6 @@
 """
 AI Parent Agent
-================
-
+=========
 AI-controlled parent agent that maintains personality, emotional state,
 and uses rule-based reasoning combined with LLM for natural responses.
 
@@ -91,19 +90,6 @@ class AIParent(BaseParent):
         
         # NEW: Emotional Memory System - stores how interactions felt
         self._emotional_memory = EmotionalMemorySystem(max_capacity=1000)
-<<<<<<< Updated upstream
-    
-=======
-
-        # ── NEW: live relationship & personality trackers ──
-        self.relationship_state = RelationshipState()
-        self.ai_personality = AIPersonalityState()
-        self._last_deltas: Dict[str, float] = {}
-
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
     @property
     def personality(self) -> PersonalityProfile:
         """Get personality profile."""
@@ -170,27 +156,6 @@ class AIParent(BaseParent):
         
         # NEW: Store emotional memory (how this felt, not what was said)
         self._store_emotional_memory(message, analysis, context)
-<<<<<<< Updated upstream
-        
-        # Publish event
-=======
-
-        # ── NEW: update relationship & personality state ──
-        rd_analysis = analyse_message(message)
-        scenario_stress = 0.0
-        if context and hasattr(context, 'tension_level'):
-            scenario_stress = context.tension_level
-        self._last_deltas = update_dynamics(
-            self.relationship_state,
-            self.ai_personality,
-            rd_analysis,
-            scenario_stress=scenario_stress,
-        )
-
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
         self._event_bus.publish(Event(
             event_type=EventType.AI_STRATEGY_SELECTED,
             source=self.id,
@@ -536,20 +501,6 @@ class AIParent(BaseParent):
         scenario_context = context or {}
         if not scenario_context and dialogue_context and hasattr(dialogue_context, 'extra_context'):
             scenario_context = dialogue_context.extra_context or {}
-<<<<<<< Updated upstream
-        
-        # Build prompt for LLM or use templates
-=======
-
-        # ── NEW: inject relationship context so LLM providers can use it ──
-        scenario_context["relationship_prompt"] = get_relationship_prompt_context(
-            self.relationship_state, self.ai_personality
-        )
-
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
         if self._llm_generator:
             prompt = self._build_llm_prompt(dialogue_context)
             # Pass scenario context to LLM generator for context-aware responses
@@ -602,22 +553,6 @@ class AIParent(BaseParent):
             f"Feeling: {dom_emotion.value} (stress: {self.emotional_state.stress_level:.1f})",
             f"Strategy: {self._current_strategy.value}",
         ]
-<<<<<<< Updated upstream
-        
-        # NEW: Add ONLY the most important emotional memory insight (1 line max)
-=======
-
-        # ── NEW: inject live relationship & personality context ──
-        rel_context = get_relationship_prompt_context(
-            self.relationship_state, self.ai_personality
-        )
-        prompt_parts.append("")
-        prompt_parts.append(rel_context)
-
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
         recent_memories = self._emotional_memory.get_recent_memories(hours=24, limit=2)
         if recent_memories and len(recent_memories) > 0:
             avg_valence = sum(m.emotional_impact.valence for m in recent_memories) / len(recent_memories)
@@ -808,22 +743,6 @@ class AIParent(BaseParent):
             "support_feeling": self._emotional_memory.get_average_valence(ContextCategory.SUPPORT, days=7),
             "conflict_feeling": self._emotional_memory.get_average_valence(ContextCategory.CONFLICT, days=7),
         }
-<<<<<<< Updated upstream
-    
-=======
-
-    def get_dynamic_state_summary(self) -> Dict[str, Any]:
-        """Return the new relationship + personality variables for /status."""
-        return {
-            "relationship": self.relationship_state.to_dict(),
-            "relationship_label": self.relationship_state.get_mood_label(),
-            "ai_personality": self.ai_personality.to_dict(),
-        }
-
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
     def adjust_personality_slightly(self, trait: PersonalityTrait, delta: float) -> None:
         """
         Make small personality adjustment based on experiences.
@@ -843,16 +762,6 @@ class AIParent(BaseParent):
             "respect_for_partner": self._respect_for_partner,
             "agreement_streak": self._agreement_streak,
             "disagreement_streak": self._disagreement_streak,
-<<<<<<< Updated upstream
-            "emotional_memory": self._emotional_memory.to_dict(),  # NEW: Save emotional memories
-=======
-            "emotional_memory": self._emotional_memory.to_dict(),
-            "relationship_state": self.relationship_state.to_dict(),
-            "ai_personality": self.ai_personality.to_dict(),
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
         }
     
     def learn_from_outcome(self, user_input: str, ai_response: str, outcome_quality: float = 0.5) -> None:
@@ -901,17 +810,4 @@ class AIParent(BaseParent):
         # NEW: Restore emotional memories
         if "emotional_memory" in data:
             ai._emotional_memory = EmotionalMemorySystem.from_dict(data["emotional_memory"])
-<<<<<<< Updated upstream
-        
-=======
-
-        if "relationship_state" in data:
-            ai.relationship_state = RelationshipState.from_dict(data["relationship_state"])
-        if "ai_personality" in data:
-            ai.ai_personality = AIPersonalityState.from_dict(data["ai_personality"])
-
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
         return ai

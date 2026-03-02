@@ -30,14 +30,6 @@ from nurture.core.enums import (
 )
 
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-# =============================================================================
-# EMOTIONAL STATE
-# =============================================================================
-=======
-=======
->>>>>>> Stashed changes
 # ── Relationship State (updated every message exchange) ──────────────────
 @dataclass
 class RelationshipState:
@@ -151,10 +143,6 @@ class AIPersonalityState:
         label = self.get_conflict_style_label()
         self.conflict_style = AIConflictStyle(label)
 
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 
 @dataclass
 class EmotionalState:
