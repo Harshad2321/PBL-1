@@ -70,6 +70,7 @@ class AIParent(BaseParent):
         
         # AI-specific components
         self._llm_generator = llm_generator
+        self._llm_instance = None   # raw LLM object extracted from generator lambda
         self._current_strategy: ResponseStrategy = ResponseStrategy.SUPPORTIVE
         self._strategy_weights: Dict[ResponseStrategy, float] = {}
         self._last_player_message: str = ""
@@ -90,6 +91,14 @@ class AIParent(BaseParent):
         
         # NEW: Emotional Memory System - stores how interactions felt
         self._emotional_memory = EmotionalMemorySystem(max_capacity=1000)
+
+        # Last relationship/personality deltas (populated by relationship_dynamics)
+        self._last_deltas: Dict[str, float] = {}
+
+        # Live relationship and personality state (updated each message)
+        self.relationship_state = RelationshipState()
+        self.ai_personality = AIPersonalityState()
+
     @property
     def personality(self) -> PersonalityProfile:
         """Get personality profile."""
@@ -134,7 +143,13 @@ class AIParent(BaseParent):
         
         # Analyze message and update state
         analysis = self._analyze_incoming_message(message, context)
-        
+
+        # Update live relationship + personality state and capture deltas
+        # analyse_message produces the exact keys update_dynamics expects
+        self._last_deltas = update_dynamics(
+            self.relationship_state, self.ai_personality, analyse_message(message)
+        )
+
         # Update emotional state based on analysis
         self._apply_message_impact(analysis)
         
@@ -705,21 +720,33 @@ class AIParent(BaseParent):
         )
     
     def set_llm_generator(self, generator: Callable[[str], str]) -> None:
-        """
-        Set the LLM generator function.
-        
-        Args:
-            generator: Function that takes prompt string and returns response
-        """
+        """Set the LLM generator function."""
         self._llm_generator = generator
-    
+        # Extract the real LLM instance from the lambda closure so
+        # reset_conversation() can clear its history directly.
+        self._llm_instance = None
+        if hasattr(generator, '__closure__') and generator.__closure__:
+            for cell in generator.__closure__:
+                try:
+                    obj = cell.cell_contents
+                    if hasattr(obj, 'conversation_history'):
+                        self._llm_instance = obj
+                        break
+                except ValueError:
+                    pass
+
     def reset_conversation(self) -> None:
-        """
-        Reset conversation history for a new conversation.
-        Call this before starting a new conversation after a scenario choice.
-        """
-        if self._llm_generator and hasattr(self._llm_generator, 'conversation_history'):
-            self._llm_generator.conversation_history = []
+        """Reset conversation history before each new conversation."""
+        if self._llm_instance and hasattr(self._llm_instance, 'conversation_history'):
+            self._llm_instance.conversation_history = []
+
+    def get_dynamic_state_summary(self) -> Dict[str, Any]:
+        """Return live relationship + personality state as plain dicts for display."""
+        return {
+            "relationship": self.relationship_state.to_dict(),
+            "ai_personality": self.ai_personality.to_dict(),
+            "relationship_label": self.relationship_state.get_mood_label(),
+        }
     
     def get_relationship_summary(self) -> Dict[str, float]:
         """

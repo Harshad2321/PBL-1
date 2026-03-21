@@ -548,13 +548,28 @@ class LocalLLM(LLMInterface):
         self._check_availability()
     
     def _check_availability(self) -> None:
-        """Check if local LLM server is running."""
+        """Check if Ollama is running and the configured model is installed."""
         try:
-            import urllib.request
-            req = urllib.request.Request(f"{self._base_url}/api/tags", method='GET')
-            with urllib.request.urlopen(req, timeout=5) as response:
-                self._available = response.status == 200
-        except:
+            import urllib.request, json
+            with urllib.request.urlopen(
+                urllib.request.Request(f"{self._base_url}/api/tags", method='GET'),
+                timeout=5
+            ) as r:
+                if r.status != 200:
+                    print("[Ollama] Server not reachable. Using mock responses.")
+                    self._available = False
+                    return
+                installed = [m['name'] for m in json.loads(r.read().decode()).get('models', [])]
+
+            if self.config.model_name in installed:
+                self._available = True
+                print(f"[Ollama] Connected — model '{self.config.model_name}' ready.")
+            else:
+                print(f"[Ollama] Model '{self.config.model_name}' not found in Ollama. "
+                      f"Installed: {installed}. Using mock responses.")
+                self._available = False
+        except Exception as e:
+            print(f"[Ollama] Not available ({e}). Using mock responses.")
             self._available = False
     
     def _build_system_prompt(self, context: Optional[Dict[str, Any]] = None) -> str:
@@ -600,18 +615,27 @@ class LocalLLM(LLMInterface):
                         system_parts.append(f"YOU ARE UPSET BECAUSE: {grievance}")
             system_parts.append("")
         
-        # Instructions that emphasize referencing what happened
-        system_parts.extend([
-            "IMPORTANT - HOW TO RESPOND:",
-            "- You are NOT a therapist. You are a tired, real person with feelings.",
-            "- If he did something wrong (see above), BRING IT UP. Don't let it slide.",
-            "- Ask him WHY he did what he did. Hold him accountable.",
-            "- If he makes small talk when he should be apologizing, call him out.",
-            "- Short, pointed responses: 'Why did you do that?' 'You sided with THEM.' 'I'm still upset about earlier.'",
-            "- You DON'T forget what just happened. You DON'T pretend everything is fine.",
-            "- You can be hurt, angry, cold, sarcastic, or confrontational.",
-            "",
-        ])
+        # Instructions — tone depends on whether choice was good or bad
+        if grievance:
+            system_parts.extend([
+                "IMPORTANT - HOW TO RESPOND:",
+                "- You are NOT a therapist. You are a tired, real person with feelings.",
+                "- He did something that hurt you. BRING IT UP. Don't let it slide.",
+                "- Ask him WHY he did what he did. Hold him accountable.",
+                "- Short, pointed responses. You DON'T pretend everything is fine.",
+                "- You can be hurt, angry, cold, sarcastic, or confrontational.",
+                "",
+            ])
+        else:
+            system_parts.extend([
+                "IMPORTANT - HOW TO RESPOND:",
+                "- You are NOT a therapist. You are a tired, real person with feelings.",
+                "- He did the right thing. Acknowledge it genuinely — tired but grateful.",
+                "- You can still be exhausted and stressed but you are NOT angry at him.",
+                "- Short, warm but real responses. NOT over-the-top. Just honest.",
+                "- Do NOT invent problems or grievances that did not happen.",
+                "",
+            ])
         
         # Special instruction for first message
 
@@ -620,14 +644,25 @@ class LocalLLM(LLMInterface):
             system_parts.append(context["relationship_prompt"])
             system_parts.append("")
 
-        if is_first_message and grievance:
-            system_parts.extend([
-                "*** THIS IS THE START OF THE CONVERSATION ***",
-                "He's trying to talk to you after what he just did. REFERENCE IT.",
-                f"You're thinking about: {grievance}",
-                "Don't just say 'hi' back. You have something on your mind.",
-                "",
-            ])
+        if is_first_message:
+            if grievance:
+                system_parts.extend([
+                    "*** START OF CONVERSATION — he's talking to you after what he did ***",
+                    f"You're thinking about: {grievance}",
+                    "Don't just say 'hi' back. You have something on your mind.",
+                    "",
+                ])
+            elif self.current_choice:
+                # Good choice — set a warm opening tone
+                choices = self.CHOICE_DESCRIPTIONS.get(self.current_scenario, {})
+                choice_desc = choices.get(self.current_choice, "")
+                if choice_desc:
+                    system_parts.extend([
+                        "*** START OF CONVERSATION ***",
+                        f"He {choice_desc}. Things feel okay right now.",
+                        "Have a real, tired but decent conversation. No invented drama.",
+                        "",
+                    ])
         
         # Add emotional impacts from past
         if self.player_patterns:
@@ -646,11 +681,17 @@ class LocalLLM(LLMInterface):
                 system_parts.append(f"  {role}: {msg['content']}")
             system_parts.append("")
         
-        # Final instruction
-        system_parts.extend([
-            "Respond as Sarah (1-2 sentences max). Be real, not nice. No therapy talk.",
-            "If he wronged you, SAY SO. Examples: 'Why did you side with them?' 'You didn't defend me.' 'I'm still hurt about that.'",
-        ])
+        # Final instruction — tone depends on choice
+        if grievance:
+            system_parts.extend([
+                "Respond as Sarah (1-2 sentences max). Be real, not nice. No therapy talk.",
+                "If he wronged you, SAY SO. Examples: 'Why did you side with them?' 'You didn't defend me.'",
+            ])
+        else:
+            system_parts.extend([
+                "Respond as Sarah (1-2 sentences max). Be real, tired, human.",
+                "Don't invent problems. Don't be overly sweet. Just honest and grounded.",
+            ])
         
         return "\n".join(system_parts)
     
@@ -796,36 +837,32 @@ class LocalLLM(LLMInterface):
             # Store in history
             self.conversation_history.append({"role": "player", "content": player_message})
             
-            # Build a direct prompt - no fluff
-            full_prompt = f"""{system_prompt}
-
-He says: "{player_message}"
-
-Sarah responds (short, real, no therapy talk):"""
-            
             payload = {
                 "model": self.config.model_name,
-                "prompt": full_prompt,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user",   "content": player_message},
+                ],
                 "stream": False,
                 "options": {
-                    "temperature": 0.7,  # More creative responses
+                    "temperature": 0.7,
                     "top_p": 0.9,
-                    "num_predict": 150,  # Limit response length
+                    "num_predict": 150,
                 }
             }
-            
+
             data = json.dumps(payload).encode('utf-8')
             req = urllib.request.Request(
-                f"{self._base_url}/api/generate",
+                f"{self._base_url}/api/chat",
                 data=data,
                 headers={'Content-Type': 'application/json'},
                 method='POST'
             )
-            
+
             with urllib.request.urlopen(req, timeout=self.config.timeout) as response:
                 if response.status == 200:
                     result = json.loads(response.read().decode('utf-8'))
-                    ai_response = result.get("response", "").strip()
+                    ai_response = result.get("message", {}).get("content", "").strip()
                     
                     # Clean up response - remove extra spaces/newlines
                     ai_response = " ".join(ai_response.split())
@@ -844,8 +881,8 @@ Sarah responds (short, real, no therapy talk):"""
                 else:
                     return MockLLM(self.config).generate(prompt, context)
                 
-        except Exception as e:
-            print(f"Ollama error: {e}")
+        except Exception:
+            self._available = False  # mark down so future calls skip immediately
             return MockLLM(self.config).generate(prompt, context)
     
     def is_available(self) -> bool:
@@ -1217,3 +1254,263 @@ def create_llm_generator(
         **{k: v for k, v in kwargs.items() if hasattr(LLMConfig, k)}
     )
     return LLMFactory.create_generator(config)
+
+
+# ─── CHILD AI LLM BACKENDS ────────────────────────────────────────────────────
+# These mirror the parent LLM classes but use a DYNAMIC system prompt passed
+# through the context dict as context["system_prompt"].
+# This is needed because the child's system prompt changes with age and regression.
+
+class ChildGroqLLM:
+    """
+    Groq-backed LLM for the child AI.
+    Uses context["system_prompt"] as the system role — set dynamically per call
+    by ChildAI._build_system_prompt() so age and regression are always correct.
+    """
+
+    def __init__(
+        self,
+        api_key:     str,
+        model_name:  str   = "llama-3.3-70b-versatile",
+        max_tokens:  int   = 400,
+        temperature: float = 0.8,
+    ):
+        self.api_key     = api_key
+        self.model_name  = model_name
+        self.max_tokens  = max_tokens
+        self.temperature = temperature
+        self._base_url   = "https://api.groq.com/openai/v1/chat/completions"
+        self._last_call  = 0.0
+
+    def generate(self, prompt: str, context: Optional[Dict] = None) -> str:
+        import requests
+
+        system_prompt = (context or {}).get(
+            "system_prompt", "You are a child character in a life simulation game."
+        )
+
+        # Basic rate limiting (same pattern as GroqLLM)
+        elapsed = time.time() - self._last_call
+        if elapsed < 1.0:
+            time.sleep(1.0 - elapsed)
+        self._last_call = time.time()
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type":  "application/json",
+        }
+        payload = {
+            "model":       self.model_name,
+            "messages":    [
+                {"role": "system", "content": system_prompt},
+                {"role": "user",   "content": prompt},
+            ],
+            "max_tokens":  self.max_tokens,
+            "temperature": self.temperature,
+        }
+
+        try:
+            resp = requests.post(self._base_url, headers=headers, json=payload, timeout=30)
+            resp.raise_for_status()
+            return resp.json()["choices"][0]["message"]["content"]
+        except Exception as e:
+            print(f"[ChildGroqLLM] Error: {e}. Falling back to mock.")
+            return MockChildLLM().generate(prompt, context)
+
+
+class ChildOllamaLLM:
+    """
+    Ollama-backed LLM for the child AI.
+    Same dynamic system prompt pattern as ChildGroqLLM.
+    """
+
+    def __init__(
+        self,
+        base_url:   str = "http://localhost:11434",
+        model_name: str = "llama3.2",
+        max_tokens: int = 400,
+    ):
+        self.base_url   = base_url
+        self.model_name = model_name
+        self.max_tokens = max_tokens
+
+    def generate(self, prompt: str, context: Optional[Dict] = None) -> str:
+        import requests
+
+        system_prompt = (context or {}).get(
+            "system_prompt", "You are a child character in a life simulation game."
+        )
+        try:
+            resp = requests.post(
+                f"{self.base_url}/api/chat",
+                json={
+                    "model":   self.model_name,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user",   "content": prompt},
+                    ],
+                    "stream":  False,
+                    "options": {"temperature": 0.8, "num_predict": self.max_tokens},
+                },
+                timeout=60,
+            )
+            resp.raise_for_status()
+            return resp.json().get("message", {}).get("content", "")
+        except Exception as e:
+            print(f"[ChildOllamaLLM] Error: {e}. Falling back to mock.")
+            return MockChildLLM().generate(prompt, context)
+
+
+class MockChildLLM:
+    """
+    Template-based fallback for the child AI.
+    Returns valid JSON for both state_update and dialogue call types.
+    Used when no API key is available — mirrors MockLLM for the parent AI.
+    """
+
+    # One template output per behavior mode for dialogue calls
+    _DIALOGUE_TEMPLATES = {
+        "CONFIDENT_EXPRESSIVE": {
+            "physical_behavior":    "[runs over, tugs on sleeve, bouncing slightly]",
+            "verbal_output":        "Look! Look what I did!",
+            "emotional_subtext":    "Child wants to share something and be seen.",
+            "attention_directed_at": "PLAYER_PARENT",
+            "escalation_signal":    "NONE",
+            "player_opportunity":   "Kneel down and give the child your full attention.",
+        },
+        "ANXIOUS_CLINGY": {
+            "physical_behavior":    "[moves close, doesn't look away, grips your hand]",
+            "verbal_output":        "You coming back?",
+            "emotional_subtext":    "Child needs reassurance you won't disappear.",
+            "attention_directed_at": "PLAYER_PARENT",
+            "escalation_signal":    "LOW",
+            "player_opportunity":   "Say 'I'm not going anywhere' and stay physically close.",
+        },
+        "WITHDRAWN_QUIET": {
+            "physical_behavior":    "[sits in corner, picks at the carpet, doesn't look up]",
+            "verbal_output":        "",
+            "emotional_subtext":    "Child has decided being invisible is safer than being seen.",
+            "attention_directed_at": "SELF",
+            "escalation_signal":    "MEDIUM",
+            "player_opportunity":   "Sit nearby without speaking. Let the child come to you.",
+        },
+        "DEFIANT_REBELLIOUS": {
+            "physical_behavior":    "[crosses arms, stomps foot, glares]",
+            "verbal_output":        "No. I don't want to.",
+            "emotional_subtext":    "Child is testing whether you will stay when they push.",
+            "attention_directed_at": "PLAYER_PARENT",
+            "escalation_signal":    "MEDIUM",
+            "player_opportunity":   "Stay calm. Don't escalate. The defiance is a question about safety.",
+        },
+    }
+
+    def generate(self, prompt: str, context: Optional[Dict] = None) -> str:
+        call_type = (context or {}).get("type", "child_dialogue")
+
+        if call_type == "child_state_update":
+            return self._mock_state_update(prompt)
+        return self._mock_dialogue(prompt)
+
+    def _mock_state_update(self, prompt: str) -> str:
+        # Minimal no-change state update — the real values stay as they are
+        # Extract current values from prompt (they're embedded as JSON)
+        import re
+        match = re.search(r'"child_state"\s*:\s*(\{[^}]+\})', prompt)
+        child_state = {}
+        if match:
+            try:
+                child_state = json.loads(match.group(1))
+            except Exception:
+                pass
+        child_state.setdefault("attachment_security",      60)
+        child_state.setdefault("emotional_safety",         60)
+        child_state.setdefault("self_worth",               60)
+        child_state.setdefault("conflict_internalization", 10)
+        child_state.setdefault("attention_need",           40)
+        child_state.setdefault("emotional_expression",     55)
+
+        rc_match = re.search(r'"relationship_context"\s*:\s*(\{[^}]+\})', prompt)
+        rel_ctx = {}
+        if rc_match:
+            try:
+                rel_ctx = json.loads(rc_match.group(1))
+            except Exception:
+                pass
+        rel_ctx.setdefault("parent_conflict_intensity", 20)
+        rel_ctx.setdefault("trust_between_parents",     70)
+        rel_ctx.setdefault("household_stress",          25)
+
+        result = {
+            "updated_state": {
+                "age_years":  0,
+                "age_months": 0,
+                "child_state":          child_state,
+                "relationship_context": rel_ctx,
+            },
+            "active_behavior_mode":    "ANXIOUS_CLINGY",
+            "regression_flags": {
+                "regression_risk":       False,
+                "regression_active":     False,
+                "acute_stress_response": False,
+            },
+            "state_narrative":        "Child processed the event quietly.",
+            "suggested_child_trigger": "child waits and watches",
+        }
+        return json.dumps(result)
+
+    def _mock_dialogue(self, prompt: str) -> str:
+        # Pick template based on behavior mode found in prompt
+        for mode in ["WITHDRAWN_QUIET", "DEFIANT_REBELLIOUS", "ANXIOUS_CLINGY", "CONFIDENT_EXPRESSIVE"]:
+            if mode in prompt:
+                template = self._DIALOGUE_TEMPLATES[mode]
+                break
+        else:
+            template = self._DIALOGUE_TEMPLATES["ANXIOUS_CLINGY"]
+
+        return json.dumps({"child_output": template})
+
+
+def create_child_llm_generator(
+    provider:   str            = "mock",
+    api_key:    Optional[str]  = None,
+    model_name: Optional[str]  = None,
+    **kwargs,
+) -> Callable:
+    """
+    Factory for creating a child AI LLM generator.
+    Same usage pattern as create_llm_generator() but for ChildAI.
+
+    Returns a callable: (prompt, context) -> str
+    context["system_prompt"] carries the dynamic, age-aware system prompt.
+
+    Example:
+        generator = create_child_llm_generator(
+            provider="groq",
+            api_key=os.getenv("GROQ_API_KEY"),
+        )
+        child.set_llm_generator(generator)
+    """
+    api_key = api_key or os.getenv("GROQ_API_KEY")
+
+    if provider == "groq" and api_key:
+        llm = ChildGroqLLM(
+            api_key    = api_key,
+            model_name = model_name or "llama-3.3-70b-versatile",
+            **{k: v for k, v in kwargs.items() if k in ("max_tokens", "temperature")},
+        )
+    elif provider == "ollama":
+        # Check if Ollama is running
+        try:
+            import requests
+            requests.get("http://localhost:11434/api/tags", timeout=2)
+            llm = ChildOllamaLLM(
+                model_name = model_name or "llama3.2",
+                **{k: v for k, v in kwargs.items() if k in ("base_url", "max_tokens")},
+            )
+        except Exception:
+            print("[ChildLLM] Ollama not available. Using mock.")
+            llm = MockChildLLM()
+    else:
+        llm = MockChildLLM()
+
+    return lambda prompt, context=None: llm.generate(prompt, context)

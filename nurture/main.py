@@ -20,6 +20,7 @@ from nurture.core.interaction_manager import InteractionManager, ScenarioContext
 # Agent imports
 from nurture.agents.player_parent import PlayerParent
 from nurture.agents.ai_parent import AIParent
+from nurture.agents.child_ai import ChildAI
 
 # Memory imports
 from nurture.memory.state_manager import StateManager
@@ -36,7 +37,7 @@ from nurture.rules.emotional_rules import EmotionalRules
 from nurture.rules.behavioral_constraints import BehavioralConstraints
 
 # Utils imports
-from nurture.utils.llm_interface import create_llm_generator, LLMConfig
+from nurture.utils.llm_interface import create_llm_generator, LLMConfig, create_child_llm_generator
 
 
 def load_env_file():
@@ -84,6 +85,7 @@ class NurtureGame:
         # Core components (initialized on game start)
         self.player_parent: Optional[PlayerParent] = None
         self.ai_parent: Optional[AIParent] = None
+        self.child_ai: Optional[ChildAI] = None
         self.interaction_manager: Optional[InteractionManager] = None
         self.state_manager: Optional[StateManager] = None
         
@@ -97,6 +99,9 @@ class NurtureGame:
         self._is_running = False
         self._player_role: Optional[ParentRole] = None
         self._current_day_active = False  # True while day scenario is active
+        self._current_act: int = 1
+        self._current_day: int = 1
+        self._sustained_high_stress_days: int = 0
         
         # Context for AI conversations
         self._last_scenario_key = None
@@ -154,9 +159,11 @@ class NurtureGame:
         
         # Set up LLM with Ollama (local) -> Mock fallback
         import os
-        
+
         llm_generator = None
-        
+        _child_llm_provider = "mock"
+        _child_llm_model = None
+
         # Try Ollama (local LLM)
         print("[*] Checking Ollama (local AI)...")
         try:
@@ -167,21 +174,21 @@ class NurtureGame:
             # Try to find a good model
             import json
             models_data = json.loads(response.read().decode())
-            available_models = [m['name'].split(':')[0] for m in models_data.get('models', [])]
-            
-            # Prefer conversational models
-            preferred_models = ['neural-chat', 'mistral', 'llama2', 'dolphin-mixtral']
+            available_models = [m['name'] for m in models_data.get('models', [])]
+
+            # Prefer conversational models (match against base name, keep full name with tag)
+            preferred_models = ['neural-chat', 'mistral', 'llama', 'dolphin-mixtral', 'phi', 'gemma']
             selected_model = None
-            
+
             for pref in preferred_models:
                 for model in available_models:
                     if pref in model.lower():
-                        selected_model = pref
+                        selected_model = model   # use full name e.g. "mistral:latest"
                         break
                 if selected_model:
                     break
-            
-            # Use first available model if no preference found
+
+            # Fall back to first available model if none of the preferred ones found
             if not selected_model and available_models:
                 selected_model = available_models[0]
             
@@ -192,6 +199,8 @@ class NurtureGame:
                     provider="ollama",
                     model_name=selected_model
                 )
+                _child_llm_provider = "ollama"
+                _child_llm_model = selected_model
             else:
                 print("[!] Ollama found but no models pulled.")
                 print("    Pull a model with: ollama pull neural-chat")
@@ -206,7 +215,16 @@ class NurtureGame:
             llm_generator = create_llm_generator(provider="mock")
         
         self.ai_parent.set_llm_generator(llm_generator)
-        
+
+        # Initialize Child AI (mirrors AIParent setup, shares LLM backend)
+        self.child_ai = ChildAI(name="Lily")
+        child_llm = create_child_llm_generator(
+            provider=_child_llm_provider,
+            model_name=_child_llm_model,
+        )
+        self.child_ai.set_llm_generator(child_llm)
+        print("[OK] Child AI (Lily) initialized!")
+
         # Initialize rule engine
         rule_engine = RuleEngine()
         
@@ -380,7 +398,12 @@ class NurtureGame:
             return
         
         scenario = self.get_current_scenario()
-        
+
+        # Track act/day for child AI age advancement
+        act_str = str(scenario.get('act', 'ACT 1'))
+        self._current_act = 2 if '2' in act_str else 1
+        self._current_day = scenario.get('day', 1)
+
         print(f"\n{'='*70}")
         print(f"{scenario['act']} - Day {scenario['day']}/{scenario['total_days_in_act']}")
         print(f"{'='*70}")
@@ -491,7 +514,11 @@ class NurtureGame:
         
         # Display the choice briefly
         print(f"\nYou chose: {result.get('choice_text')}\n")
-        
+
+        # Trigger child AI reaction to this day's event (Act 2+ only)
+        if self.child_ai and self._current_act >= 2:
+            self._run_child_reaction(scenario, result)
+
         # Check if act is complete - show full results only then
         if result.get("act_complete"):
             print(f"\n{'='*70}")
@@ -504,6 +531,10 @@ class NurtureGame:
                 print(f"  - {pattern.replace('_', ' ').title()}")
             print(f"\nThese choices have shaped your child's early development.")
             print("Ready for the next chapter? (coming soon: ACT 2 - MIRROR)\n")
+            # Lock attachment style at end of Act 1
+            if self.child_ai:
+                self.child_ai.lock_attachment_style()
+                print(f"[Child] Attachment style locked: {self.child_ai.state.attachment_style}")
         else:
             next_day = result.get("next_day_preview", "")
             print(f"The next day arrives...\n")
@@ -667,6 +698,60 @@ class NurtureGame:
         print("\nThank you for playing Nurture!")
         print("Your progress has been saved. See you next time!\n")
 
+    def _run_child_reaction(self, scenario, result) -> None:
+        """
+        Trigger the child AI after a story choice and display the reaction.
+        Called once per day from respond_to_scenario().
+        """
+        try:
+            choice_text = result.get("choice_text", "")
+            event_desc = (
+                f"{scenario.title}: {scenario.description[:200]} "
+                f"The parent chose to: {choice_text}"
+            )
+            scene_ctx = {
+                "location": "home",
+                "present": ["PLAYER_PARENT"],
+                "trigger_event": choice_text,
+                "time_of_day": "DAYTIME",
+                "recent_events": self.child_ai.state.session_events_today[-3:],
+            }
+            child_result = self.child_ai.process_parent_action(
+                event_description=event_desc,
+                scene_context=scene_ctx,
+                act=self._current_act,
+                day=self._current_day,
+                sustained_high_stress_days=self._sustained_high_stress_days,
+            )
+            # Update stress day counter
+            if self.child_ai.state.household_stress > 65:
+                self._sustained_high_stress_days += 1
+            else:
+                self._sustained_high_stress_days = 0
+            # Record this event for the child's session memory
+            self.child_ai.state.session_events_today.append(choice_text[:80])
+
+            self._display_child_response(child_result)
+        except Exception as e:
+            pass  # Don't let child AI errors crash the game
+
+    def _display_child_response(self, result) -> None:
+        """Display the child AI's reaction to the player."""
+        co = result.child_output
+        cy = self.child_ai.state.age_years
+        cm = self.child_ai.state.age_months
+        mode = result.behavior_mode
+
+        print(f"  ┌─── Lily ({cy}y {cm}m) | {mode} {'─'*max(1, 44-len(mode))}┐")
+        print(f"  │ Physical: {co.physical_behavior[:58]:<58}│")
+        verbal = co.verbal_output if co.verbal_output else "[silence]"
+        print(f"  │ Verbal:   \"{verbal[:56]}\"{'':>{max(0,55-len(verbal))}}│")
+        print(f"  │ Subtext:  {co.emotional_subtext[:58]:<58}│")
+        if result.regression_flags.get("regression_active"):
+            print(f"  │ ⚠ Regression active — speaking like younger child        │")
+        print(f"  └{'─'*62}┘")
+        print()
+
     def _show_live_stats(self) -> None:
         """Print a compact one-box summary of relationship & personality after each message."""
         if not self.ai_parent:
@@ -763,6 +848,24 @@ class NurtureGame:
                 print(f"  Supportiveness:   {pers.get('supportiveness', 0):5.1f}/100  {_bar(pers.get('supportiveness', 0))}")
                 print(f"  Defensiveness:    {pers.get('defensiveness', 0):5.1f}/100  {_bar(pers.get('defensiveness', 0))}")
                 print(f"  Forgiveness:      {pers.get('forgiveness_rate', 0):5.1f}/100  {_bar(pers.get('forgiveness_rate', 0))}")
+
+            # Child AI state
+            if self.child_ai:
+                cs = self.child_ai.state
+                print(f"\n=== Child State (Lily, {cs.age_years}y {cs.age_months}m) ===")
+                print(f"  Mode:             {cs.active_behavior_mode}")
+                print(f"  Attachment Sec:   {cs.attachment_security:5.1f}/100  {_bar(cs.attachment_security)}")
+                print(f"  Emotional Safety: {cs.emotional_safety:5.1f}/100  {_bar(cs.emotional_safety)}")
+                print(f"  Self Worth:       {cs.self_worth:5.1f}/100  {_bar(cs.self_worth)}")
+                print(f"  Conflict Inten:   {cs.conflict_internalization:5.1f}/100  {_bar(cs.conflict_internalization)}")
+                print(f"  Attention Need:   {cs.attention_need:5.1f}/100  {_bar(cs.attention_need)}")
+                print(f"  Emot Expression:  {cs.emotional_expression:5.1f}/100  {_bar(cs.emotional_expression)}")
+                print(f"  Household Stress: {cs.household_stress:5.1f}/100  {_bar(cs.household_stress)}")
+                if cs.attachment_style:
+                    print(f"  Attachment Style: {cs.attachment_style} [LOCKED]")
+                if cs.archetype:
+                    print(f"  Archetype:        {cs.archetype} [LOCKED]")
+
         elif cmd == "save":
             filepath = self.save_game()
             print(f"[OK] Game saved to: {filepath}")
