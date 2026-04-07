@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"Dialog",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"Dialog",
+  "parent":{
+    "name":"PBL",
+    "path":"PBL.yyp",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}

@@ -10,8 +10,8 @@
 # Uncomment if using OpenAI API:
 # openai>=1.0.0
 
-# Uncomment if using local LLM with HTTP API:
-# requests>=2.28.0
+# HTTP requests (for local LLM and API testing)
+requests>=2.28.0
 
 # Development & Testing
 # ---------------------------------
@@ -24,10 +24,14 @@ hypothesis>=6.0.0
 # black>=23.0.0
 # mypy>=1.0.0
 
+# API Server (for GameMaker integration)
+# --------------------------
+flask>=3.0.0
+flask-cors>=4.0.0
+
 # Future Features (optional)
 # --------------------------
-# For web interface:
-# flask>=3.0.0
+# For WebSocket support:
 # flask-socketio>=5.3.0
 
 # For voice features:
