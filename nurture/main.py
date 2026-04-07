@@ -130,39 +130,43 @@ class NurtureGame:
     
     def _initialize_agents(self, player_role: ParentRole, ai_role: ParentRole) -> None:
         """Initialize player and AI parent agents."""
-        
+
         # Create player parent state using factory method
         from nurture.core.data_structures import ParentState, PersonalityProfile
         from nurture.memory.memory_store import MemoryStore
-        
+
         player_state = ParentState.create_player(
             role=player_role,
             name=player_role.get_display_name()
         )
-        
+
         self.player_parent = PlayerParent(
             state=player_state,
             memory_store=MemoryStore("player")
         )
-        
+
         # Create AI parent state using factory method
         ai_state = ParentState.create_ai(
             role=ai_role,
             name=ai_role.get_display_name(),
             personality=PersonalityProfile.create_balanced()
         )
-        
+
         self.ai_parent = AIParent(
             state=ai_state,
             memory_store=MemoryStore("ai_partner")
         )
-        
+
         # Set up LLM with Ollama (local) -> Mock fallback
         import os
 
         llm_generator = None
         _child_llm_provider = "mock"
         _child_llm_model = None
+
+        # Track active model configuration for display
+        self._active_parent_model = None
+        self._active_child_model = None
 
         # Try Ollama (local LLM)
         print("[*] Checking Ollama (local AI)...")
@@ -201,6 +205,7 @@ class NurtureGame:
                 )
                 _child_llm_provider = "ollama"
                 _child_llm_model = selected_model
+                self._active_parent_model = f"Ollama: {selected_model}"
             else:
                 print("[!] Ollama found but no models pulled.")
                 print("    Pull a model with: ollama pull neural-chat")
@@ -213,7 +218,8 @@ class NurtureGame:
             print("[*] Using Mock LLM (template responses)")
             print("    For real AI responses, install Ollama: https://ollama.ai")
             llm_generator = create_llm_generator(provider="mock")
-        
+            self._active_parent_model = "Mock LLM (template responses)"
+
         self.ai_parent.set_llm_generator(llm_generator)
 
         # Initialize Child AI (mirrors AIParent setup, shares LLM backend)
@@ -223,7 +229,17 @@ class NurtureGame:
             model_name=_child_llm_model,
         )
         self.child_ai.set_llm_generator(child_llm)
+
+        # Set child model info based on provider
+        if _child_llm_provider == "mock":
+            self._active_child_model = "Mock LLM (template responses)"
+        elif _child_llm_provider == "ollama":
+            self._active_child_model = f"Ollama: {_child_llm_model}"
+        else:
+            self._active_child_model = f"{_child_llm_provider}: {_child_llm_model}"
+
         print("[OK] Child AI (Lily) initialized!")
+        print(f"[*] Child AI Model: {self._active_child_model}")
 
         # Initialize rule engine
         rule_engine = RuleEngine()
@@ -260,6 +276,7 @@ class NurtureGame:
         
         print("\n[OK] Game initialized successfully!")
         print(f"[OK] Learning System active - AI will adapt to your playstyle")
+        print(f"[*] AI Parent Model: {self._active_parent_model}")
         
         # Initialize story engine
         self._initialize_story()
@@ -793,8 +810,15 @@ class NurtureGame:
         """Handle console commands."""
         parts = command.split()
         cmd = parts[0].lower() if parts else ""
-        
+
         if cmd == "status":
+            # Display active AI models
+            print("\n=== Active AI Models ===")
+            if hasattr(self, '_active_parent_model') and self._active_parent_model:
+                print(f"  AI Parent: {self._active_parent_model}")
+            if hasattr(self, '_active_child_model') and self._active_child_model:
+                print(f"  Child AI:  {self._active_child_model}")
+
             print("\n=== Story Progress ===")
             story_status = self.get_story_status()
             for key, value in story_status.items():
