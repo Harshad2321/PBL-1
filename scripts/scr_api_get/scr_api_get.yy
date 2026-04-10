@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"scr_api_get",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"scr_api_get",
+  "parent":{
+    "name":"PBL",
+    "path":"PBL.yyp",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}

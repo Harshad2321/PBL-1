@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"scr_send_choice",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"scr_send_choice",
+  "parent":{
+    "name":"PBL",
+    "path":"PBL.yyp",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}
