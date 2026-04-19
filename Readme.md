@@ -1,14 +1,30 @@
+<p align="center">
+  <img src="assets/banner.png" width="900"/>
+</p>
+
+
 # Nurture — AI Parenting Simulation Game
 
 > A locally-hosted AI game where you play as a parent navigating real family challenges, powered by Mistral 7B running on Ollama. No cloud. No API costs. Runs entirely on your machine.
 
 ---
 
-## 🎥 Demo Video
 
-https://github.com/Harshad2321/PBL-1/raw/main/DEMO%20VIDEO.mp4
+🎮 Watch how Nurture simulates real parenting decisions using AI
 
-> 📥 [Click here to download and watch the demo](https://github.com/Harshad2321/PBL-1/raw/main/DEMO%20VIDEO.mp4)
+[![Watch Demo](https://img.youtube.com/vi/_EbgPMZ7qO0/0.jpg)](https://youtu.be/_EbgPMZ7qO0)
+
+
+---
+
+## ✨ Key Features
+
+- 🧠 AI-driven emotional simulation (Trust, Stress, Closeness, Resentment)
+- 💬 Real-time conversations with an AI co-parent
+- 🔁 Stateful memory — AI remembers past interactions
+- 🧩 Choice-based gameplay with meaningful consequences
+- 🏠 Fully offline — no APIs, no cloud dependency
+- ⚡ Fast local inference using Ollama + Mistral 7B
 
 ---
 
@@ -140,7 +156,10 @@ NUTURE/
 ## 🏆 Presented At
 
 **Industry Conclave 2026** — AI & Machine Learning Department, SIT Pune  
-Presented to industry experts **Shekhar Anand Jha** and **Amol Mahajan**
+
+Presented to industry experts:
+- **Shekhar Anand Jha**
+- **Amol Mahajan**
 
 ---
 
