@@ -21,6 +21,12 @@ dad_scale  = 0.5;
 mom_scale  = 0.5;
 main_scale = 8.5;
 
+// Scenario UI typing state (used by Draw_64 / Step_2)
+scenario_type_source = "";
+scenario_type_visible = "";
+scenario_type_chars = 0;
+scenario_type_speed = 1.25;
+
 if (array_length(messages) > 0)
 {
 	current_message = 0;

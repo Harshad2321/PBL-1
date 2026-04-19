@@ -1,4 +1,4 @@
-move_speed = 0.5;
+move_speed = 2.0;
 var lay_outer = layer_tilemap_get_id("Outer_Walls");
 
 var lay_bed   = layer_tilemap_get_id("Bedroom_walls");

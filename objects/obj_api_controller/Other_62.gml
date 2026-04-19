@@ -1,8 +1,41 @@
 var _request_id = async_load[? "id"];
+var _is_tracked = (
+    _request_id == req_start ||
+    _request_id == req_choose ||
+    _request_id == req_message ||
+    _request_id == req_status ||
+    _request_id == req_end_conv
+);
+
+if (!_is_tracked) {
+    exit;
+}
+
+var _status = async_load[? "status"];
+
+// Async HTTP may fire progress updates before final payload is available.
+if (_status > 0) {
+    exit;
+}
+
+var _request_name = "unknown";
+if (_request_id == req_start) _request_name = "/start";
+if (_request_id == req_choose) _request_name = "/choose";
+if (_request_id == req_message) _request_name = "/message";
+if (_request_id == req_status) _request_name = "/status";
+if (_request_id == req_end_conv) _request_name = "/end_conversation";
+
 var _data = scr_api_parse(async_load);
 
 if (is_undefined(_data)) {
-    show_debug_message("API request failed or returned invalid JSON");
+    var _http_status = ds_map_exists(async_load, "http_status") ? async_load[? "http_status"] : -1;
+    var _result_preview = ds_map_exists(async_load, "result") ? string_copy(string(async_load[? "result"]), 1, 180) : "";
+
+    if (_status < 0) {
+        show_debug_message("API transport error on " + _request_name + " (status=" + string(_status) + ")");
+    } else {
+        show_debug_message("API invalid JSON on " + _request_name + " (http=" + string(_http_status) + ") body=" + _result_preview);
+    }
 
     if (_request_id == req_start) {
         req_start = -1;

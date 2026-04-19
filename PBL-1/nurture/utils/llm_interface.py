@@ -18,6 +18,7 @@ import os
 import json
 import time
 import random
+import re
 
 
 @dataclass
@@ -229,6 +230,19 @@ class MockLLM(LLMInterface):
     def _analyze_and_respond(self, message: str) -> str:
         """Analyze player message and generate appropriate response."""
         message_lower = message.lower()
+
+        # Hostility / verbal aggression
+        if any(word in message_lower for word in [
+            "fuck", "f***", "idiot", "stupid", "shut up", "i dont care",
+            "i don't care", "hate you", "bitch", "asshole", "screw you"
+        ]):
+            responses = [
+                "That hurt. I will talk, but not if you speak to me like that.",
+                "I know you're upset, but don't take it out on me. Talk to me with respect.",
+                "If this is how we're talking, I need a minute. Come back when we can speak calmly.",
+                "I'm exhausted too, but I won't accept being spoken to like that.",
+            ]
+            return random.choice(responses)
         
         # Greetings
         if any(word in message_lower for word in ["hi", "hello", "hey", "how are you", "how're you"]):
@@ -544,11 +558,17 @@ class LocalLLM(LLMInterface):
         self.current_scenario = None
         self.current_choice = None
         self.player_patterns = {}
+
+        # Keep one fallback instance so mock mode still preserves dialogue flow.
+        self._fallback_llm = MockLLM(config)
+        self._last_availability_check = 0.0
+        self._availability_retry_seconds = 10.0
         
         self._check_availability()
     
     def _check_availability(self) -> None:
         """Check if Ollama is running and the configured model is installed."""
+        self._last_availability_check = time.time()
         try:
             import urllib.request, json
             with urllib.request.urlopen(
@@ -692,6 +712,18 @@ class LocalLLM(LLMInterface):
                 "Respond as Sarah (1-2 sentences max). Be real, tired, human.",
                 "Don't invent problems. Don't be overly sweet. Just honest and grounded.",
             ])
+
+        system_parts.extend([
+            "",
+            "NON-NEGOTIABLE OUTPUT RULES:",
+            "- Stay in character as Sarah in every reply.",
+            "- Reply with only Sarah's spoken line (1-2 short sentences).",
+            "- No advice, no analysis, no explanations, no role labels.",
+            "- Do not mention being a therapist, assistant, expert, model, or AI.",
+            "- Never say things like 'in this situation', 'here is how', or 'you could respond'.",
+            "- If he is rude or insulting, react emotionally and set a boundary like a real person.",
+            "- Use natural spoken language with contractions.",
+        ])
         
         return "\n".join(system_parts)
     
@@ -816,74 +848,211 @@ class LocalLLM(LLMInterface):
         
         return impacts
 
+    def _extract_player_message(self, prompt: str) -> str:
+        """Extract raw partner message from the composed prompt."""
+        player_message = prompt
+        if "Partner just said:" in prompt:
+            parts = prompt.split("Partner just said:", 1)
+            if len(parts) > 1:
+                candidate = parts[1].strip().strip('"').split('\n')[0].strip()
+                if candidate:
+                    player_message = candidate
+        return player_message
+
+    def _sanitize_response(self, response: str) -> str:
+        """Normalize response formatting and keep it compact."""
+        response = (response or "").strip()
+        if not response:
+            return ""
+
+        # Models sometimes echo role labels (e.g., "Mother: You: ...").
+        # Strip chained labels so the UI does not render duplicated speakers.
+        label_pattern = re.compile(r'^\s*(sarah|mother|assistant|ai|you|him|player|partner)\s*:\s*', re.IGNORECASE)
+        while True:
+            cleaned = label_pattern.sub("", response, count=1).strip()
+            if cleaned == response:
+                break
+            response = cleaned
+
+        if len(response) >= 2 and response[0] == response[-1] and response[0] in ["\"", "'"]:
+            response = response[1:-1].strip()
+
+        typo_fixes = [
+            (r"\bcame\s+make\s+sure\b", "can make sure"),
+            (r"\bdoesnt\b", "doesn't"),
+            (r"\bdont\b", "don't"),
+            (r"\bcant\b", "can't"),
+            (r"\bwont\b", "won't"),
+            (r"\bim\b", "I'm"),
+        ]
+        for pattern, replacement in typo_fixes:
+            response = re.sub(pattern, replacement, response, flags=re.IGNORECASE)
+
+        response = " ".join(response.split())
+
+        segments = re.split(r'(?<=[.!?])\s+', response)
+        if len(segments) > 2:
+            response = " ".join(segments[:2]).strip()
+
+        return response
+
+    def _is_out_of_character_response(self, response: str) -> bool:
+        """Detect assistant-style/meta responses that break roleplay."""
+        lower = (response or "").lower()
+        if not lower:
+            return True
+
+        blocked_phrases = [
+            "as an ai",
+            "as a language model",
+            "i am not a therapist",
+            "i'm not a therapist",
+            "i am not an expert",
+            "i'm not an expert",
+            "i'm not your personal assistant",
+            "i am not your personal assistant",
+            "i'm not here to give advice",
+            "i am not here to give advice",
+            "give advice",
+            "in this situation",
+            "in any relationship",
+            "i can tell you that",
+            "here's how",
+            "here is how",
+            "you could respond",
+            "the dialogue",
+            "example response",
+            "it seems there might be a mistake",
+            "if your partner was",
+            "i cannot help with that",
+            "i can't help with that",
+            "i'm sorry if i misunderstood",
+        ]
+
+        if any(phrase in lower for phrase in blocked_phrases):
+            return True
+
+        if "assistant" in lower:
+            return True
+
+        if "scenario" in lower and ("respond" in lower or "dialogue" in lower):
+            return True
+
+        if len(lower) > 280 and any(marker in lower for marker in ["for example", "here's", "you could"]):
+            return True
+
+        return False
+
+    def _fallback_in_character_response(self, player_message: str, context: Optional[Dict[str, Any]] = None) -> str:
+        """Return a grounded in-character reply when model output is unusable."""
+        lower = (player_message or "").lower()
+
+        if any(token in lower for token in [
+            "fuck", "f***", "idiot", "stupid", "shut up", "don't care", "dont care",
+            "hate you", "bitch", "asshole", "screw you"
+        ]):
+            return random.choice([
+                "That was cruel. I am not talking to you like this.",
+                "I get that you're upset, but don't speak to me that way.",
+                "Take a breath and try again. I want a real conversation, not insults.",
+            ])
+
+        if any(token in lower for token in [
+            "how to respond", "what should i say", "tell me how to", "fix this dialogue",
+            "dialogue is wrong", "write a reply"
+        ]):
+            return random.choice([
+                "Do not script it. Just talk to me honestly.",
+                "I do not need a perfect line. I need you to be real with me.",
+                "Say what you actually feel, then listen. That is enough.",
+            ])
+
+        response = self._fallback_llm.generate(player_message, context)
+        response = self._sanitize_response(response)
+
+        if self._is_out_of_character_response(response):
+            return "I want to talk, but not like this. Take a breath and try again."
+
+        return response
+
+    def _send_chat_request(self, system_prompt: str, player_message: str) -> str:
+        """Send a single chat completion request to Ollama."""
+        import urllib.request
+
+        payload = {
+            "model": self.config.model_name,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user",   "content": player_message},
+            ],
+            "stream": False,
+            "options": {
+                "temperature": 0.8,
+                "top_p": 0.92,
+                "num_predict": 140,
+            }
+        }
+
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(
+            f"{self._base_url}/api/chat",
+            data=data,
+            headers={'Content-Type': 'application/json'},
+            method='POST'
+        )
+
+        with urllib.request.urlopen(req, timeout=self.config.timeout) as response:
+            if response.status != 200:
+                raise RuntimeError(f"Ollama chat failed with HTTP {response.status}")
+
+            result = json.loads(response.read().decode('utf-8'))
+            return result.get("message", {}).get("content", "").strip()
+
     def generate(self, prompt: str, context: Optional[Dict[str, Any]] = None) -> str:
         """Generate response using local LLM with context awareness."""
+        player_message = self._extract_player_message(prompt)
+
         if not self._available:
-            return MockLLM(self.config).generate(prompt, context)
+            if time.time() - self._last_availability_check >= self._availability_retry_seconds:
+                self._check_availability()
+            if not self._available:
+                self.conversation_history.append({"role": "player", "content": player_message})
+                fallback = self._fallback_in_character_response(player_message, context)
+                self.conversation_history.append({"role": "ai", "content": fallback})
+                return fallback
         
         try:
-            import urllib.request
-            
             # Build context-aware system prompt
             system_prompt = self._build_system_prompt(context)
             
-            # Extract player message
-            player_message = prompt
-            if "Partner just said:" in prompt:
-                parts = prompt.split("Partner just said:")
-                if len(parts) > 1:
-                    player_message = parts[1].strip().strip('"').split('\n')[0]
-            
             # Store in history
             self.conversation_history.append({"role": "player", "content": player_message})
-            
-            payload = {
-                "model": self.config.model_name,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user",   "content": player_message},
-                ],
-                "stream": False,
-                "options": {
-                    "temperature": 0.7,
-                    "top_p": 0.9,
-                    "num_predict": 150,
-                }
-            }
 
-            data = json.dumps(payload).encode('utf-8')
-            req = urllib.request.Request(
-                f"{self._base_url}/api/chat",
-                data=data,
-                headers={'Content-Type': 'application/json'},
-                method='POST'
-            )
+            ai_response = self._send_chat_request(system_prompt, player_message)
+            ai_response = self._sanitize_response(ai_response)
 
-            with urllib.request.urlopen(req, timeout=self.config.timeout) as response:
-                if response.status == 200:
-                    result = json.loads(response.read().decode('utf-8'))
-                    ai_response = result.get("message", {}).get("content", "").strip()
-                    
-                    # Clean up response - remove extra spaces/newlines
-                    ai_response = " ".join(ai_response.split())
-                    
-                    # Limit to 3 sentences max
-                    sentences = ai_response.split('.')
-                    if len(sentences) > 3:
-                        ai_response = '.'.join(sentences[:3]) + '.'
-                    
-                    ai_response = ai_response.strip()
-                    
-                    # Store AI response
-                    self.conversation_history.append({"role": "ai", "content": ai_response})
-                    
-                    return ai_response if ai_response else "I hear you. Tell me more."
-                else:
-                    return MockLLM(self.config).generate(prompt, context)
+            if self._is_out_of_character_response(ai_response):
+                repair_prompt = (
+                    system_prompt + "\n\n"
+                    "CRITICAL CHARACTER LOCK:\n"
+                    "- You broke character in a prior response.\n"
+                    "- Reply ONLY as Sarah with 1-2 short spoken sentences.\n"
+                    "- No advice, no analysis, no explanations."
+                )
+                ai_response = self._send_chat_request(repair_prompt, player_message)
+                ai_response = self._sanitize_response(ai_response)
+
+            if self._is_out_of_character_response(ai_response) or not ai_response:
+                ai_response = self._fallback_in_character_response(player_message, context)
+
+            self.conversation_history.append({"role": "ai", "content": ai_response})
+            return ai_response
                 
         except Exception:
-            self._available = False  # mark down so future calls skip immediately
-            return MockLLM(self.config).generate(prompt, context)
+            self._available = False  # Trigger periodic re-check instead of a permanent lockout.
+            fallback = self._fallback_in_character_response(player_message, context)
+            self.conversation_history.append({"role": "ai", "content": fallback})
+            return fallback
     
     def is_available(self) -> bool:
         """Check if local LLM is available."""

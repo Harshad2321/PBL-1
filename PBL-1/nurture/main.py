@@ -197,7 +197,8 @@ class NurtureGame:
                 print("    Responses will understand scenario and conversation context.")
                 llm_generator = create_llm_generator(
                     provider="ollama",
-                    model_name=selected_model
+                    model_name=selected_model,
+                    timeout=90,
                 )
                 _child_llm_provider = "ollama"
                 _child_llm_model = selected_model

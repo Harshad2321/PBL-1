@@ -5,7 +5,49 @@ if (obj_controller.game_mode != "scenario" && obj_controller.game_mode != "choic
 {
 	current_message = -1;
 	draw_message = "";
+	scenario_type_source = "";
+	scenario_type_visible = "";
+	scenario_type_chars = 0;
     exit;
+}
+
+if (obj_controller.game_mode == "scenario" || obj_controller.game_mode == "choice_feedback")
+{
+	var _scenario_full_text = string(obj_controller.scenario_text);
+
+	if (scenario_type_source != _scenario_full_text)
+	{
+		scenario_type_source = _scenario_full_text;
+		scenario_type_visible = "";
+		scenario_type_chars = 0;
+	}
+
+	var _scenario_len = string_length(scenario_type_source);
+
+	if (_scenario_len <= 0)
+	{
+		scenario_type_visible = "";
+		scenario_type_chars = 0;
+	}
+	else
+	{
+		if ((keyboard_check_pressed(vk_space) || keyboard_check_pressed(vk_return)) && scenario_type_chars < _scenario_len)
+		{
+			scenario_type_chars = _scenario_len;
+		}
+		else if (scenario_type_chars < _scenario_len)
+		{
+			scenario_type_chars = min(_scenario_len, scenario_type_chars + scenario_type_speed);
+		}
+
+		scenario_type_visible = string_copy(scenario_type_source, 1, floor(scenario_type_chars));
+	}
+}
+else
+{
+	scenario_type_source = "";
+	scenario_type_visible = "";
+	scenario_type_chars = 0;
 }
 
 // ==========================

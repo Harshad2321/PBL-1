@@ -13,6 +13,8 @@ if (retry_start_request && req_start == -1) {
 
 global.status_timer++;
 if (global.status_timer >= 180) {
-    req_status = scr_api_get("http://127.0.0.1:8000/status");
-    global.status_timer = 0;
+    if (req_status == -1) {
+        req_status = scr_api_get("http://127.0.0.1:8000/status");
+        global.status_timer = 0;
+    }
 }
